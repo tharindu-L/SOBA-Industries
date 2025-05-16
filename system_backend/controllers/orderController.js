@@ -626,3 +626,50 @@ export const updateAmountPaid = async (req, res) => {
         });
     }
 };
+
+export const getOrderStatistics = async (req, res) => {
+  try {
+    // Get regular order statistics
+    const [regularOrders] = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN current_status = 'delivered' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN current_status = 'processing' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN current_status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+      FROM orders
+    `);
+
+    // Get custom order statistics
+    const [customOrders] = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN status = 'pending' OR status = 'in_progress' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+      FROM custom_orders
+    `);
+
+    // Get count of approved orders from invoices
+    const [approvedOrders] = await pool.query(`
+      SELECT COUNT(*) AS approved
+      FROM invoices
+      WHERE customer_approval_status = 'approved'
+    `);
+
+    const stats = {
+      total: parseInt(regularOrders[0].total) + parseInt(customOrders[0].total),
+      completed: parseInt(regularOrders[0].completed) + parseInt(customOrders[0].completed),
+      pending: parseInt(regularOrders[0].pending) + parseInt(customOrders[0].pending),
+      cancelled: parseInt(regularOrders[0].cancelled) + parseInt(customOrders[0].cancelled),
+      approved: parseInt(approvedOrders[0].approved || 0)
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching order statistics:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve order statistics',
+      details: error.message
+    });
+  }
+};

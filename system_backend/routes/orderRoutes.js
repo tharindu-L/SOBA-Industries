@@ -1,4 +1,4 @@
-import {createCustomOrder, getAllOrders, getCustomOrders, getOrderByCustomerId, getOrdersByCustomerId, processPayment, updateAmountPaid, updateNewOrderStatus, updateOrderStatus} from '../controllers/orderController.js';
+import {createCustomOrder, getAllOrders, getCustomOrders, getOrderByCustomerId, getOrderStatistics, getOrdersByCustomerId, processPayment, updateAmountPaid, updateNewOrderStatus, updateOrderStatus} from '../controllers/orderController.js';
 
 import authMiddleware from '../middleware/auth.js';
 import express from 'express';
@@ -50,5 +50,7 @@ OrderRoutes.get('/all_customer_order_Id',authMiddleware, getOrderByCustomerId);
 OrderRoutes.put('/status',updateOrderStatus);
 
 OrderRoutes.put('/update_am',updateAmountPaid);
+
+OrderRoutes.get('/order-stats', getOrderStatistics);
 
 export default OrderRoutes;

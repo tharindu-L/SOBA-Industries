@@ -17,7 +17,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 
 import AddCircleIcon from '@mui/icons-material/AddCircle';
@@ -36,6 +36,7 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));  
   const [open, setOpen] = useState(false);  
   const navigate = useNavigate();  
+  const location = useLocation(); // Add this to get current location
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +68,7 @@ const Sidebar = () => {
   }, []);
   
   const menuItems = [
- 
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Add Material', icon: <AddCircleIcon />, path: '/add-material' },
     { text: 'List Material', icon: <FormatListBulletedIcon />, path: '/list-material' },
     { text: 'Add Products', icon: <PersonAddIcon />, path: '/Add-products' },
@@ -75,6 +76,11 @@ const Sidebar = () => {
     { text: 'Job List', icon: <WorkIcon />, path: '/job-list' },
     { text: 'Normal Orders', icon: <WorkIcon />, path: '/n-orders' },
   ];
+
+  // Function to check if a menu item is active
+  const isActiveRoute = (path) => {
+    return location.pathname === path;
+  };
 
   return (
     <Box>
@@ -157,31 +163,59 @@ const Sidebar = () => {
 
         <Box sx={{ overflow: 'auto', overflowX: 'hidden', mt: 2 }}>
           <List>
-            {menuItems.map((item, index) => (
-              <React.Fragment key={item.text}>
-                <ListItem 
-                  button 
-                  component={Link} 
-                  to={item.path}
-                  sx={{
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                    borderRadius: '4px',
-                    mx: 1,
-                    mb: 0.5
-                  }}
-                >
-                  <ListItemIcon sx={{ color: 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItem>
-                {index < menuItems.length - 1 && (
-                  <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
-                )}
-              </React.Fragment>
-            ))}
+            {menuItems.map((item, index) => {
+              const isActive = isActiveRoute(item.path);
+              
+              return (
+                <React.Fragment key={item.text}>
+                  <ListItem 
+                    button 
+                    component={Link} 
+                    to={item.path}
+                    sx={{
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+                      },
+                      borderRadius: '4px',
+                      mx: 1,
+                      mb: 0.5,
+                      position: 'relative',
+                      '&::before': isActive ? {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        height: '60%',
+                        width: '4px',
+                        backgroundColor: '#fff',
+                        borderRadius: '0 4px 4px 0',
+                      } : {}
+                    }}
+                  >
+                    <ListItemIcon 
+                      sx={{ 
+                        color: isActive ? '#fff' : 'rgba(255,255,255,0.8)', 
+                        minWidth: '40px' 
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={item.text} 
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? '600' : '400',
+                        color: isActive ? '#fff' : 'inherit'
+                      }}
+                    />
+                  </ListItem>
+                  {index < menuItems.length - 1 && (
+                    <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </List>
         </Box>
 
