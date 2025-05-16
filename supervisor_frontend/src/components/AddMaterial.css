@@ -1,0 +1,121 @@
+/* You can add any custom styles to override the default MUI styles */
+
+
+  /* AddTour.css */
+.add-tour-container {
+    background-color: #f4f7fc; /* Soft background color */
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 0 auto;
+    font-family: 'Roboto', sans-serif; /* Clean and modern font */
+    
+  }
+  
+  .heading {
+    text-align: center;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .text-field {
+    margin-bottom: 20px;
+  }
+  
+  .MuiInputLabel-root {
+    color: #5f6368; /* Soft label color */
+  }
+  
+  .MuiOutlinedInput-root {
+    border-radius: 10px; /* Rounded input fields */
+    background-color: #fff;
+    transition: all 0.3s ease;
+  }
+  
+  .MuiOutlinedInput-root:hover {
+    border-color: #3f51b5; /* Highlight input fields on hover */
+  }
+  
+  .MuiOutlinedInput-root.Mui-focused {
+    border-color: #3f51b5;
+  }
+  
+  .MuiButton-root {
+    border-radius: 5px; /* Rounded button */
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    background-color: #3f51b5; /* Primary color */
+    transition: background-color 0.3s ease;
+  }
+  
+  .MuiButton-root:hover {
+    background-color: #303f9f; /* Darker shade on hover */
+  }
+  
+  .MuiGrid-root {
+    display: flex;
+    justify-content: center;
+  }
+  
+  /* Custom Button for File Upload */
+  .custom-file-button {
+    background-color: #ff4081; /* Custom button color */
+    color: #fff;
+    margin-top: 10px;
+    display: inline-block;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 5px;
+  }
+  
+  .custom-file-button:hover {
+    background-color: #e91e63; /* Darker shade on hover */
+  }
+  
+  /* Hides default file input */
+  .custom-file-button input[type='file'] {
+    display: none;
+  }
+  
+  @media (max-width: 600px) {
+    .add-tour-container {
+      padding: 20px;
+      max-width: 100%;
+    }
+  }
+  .image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  
+  .image-preview-item {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .image-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+  }
+  
+  .remove-image-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  

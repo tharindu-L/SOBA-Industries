@@ -1,0 +1,73 @@
+/* App.css */
+
+.App {
+  text-align: center;
+  background-size: cover; /* Ensure the background covers the entire screen */
+  background-position: center; /* Center the background image */
+  background-attachment: fixed; /* Keep the background fixed while scrolling */
+  min-height: 100vh; /* Ensures the background fills the entire viewport height */
+  display: flex; /* Use flexbox to lay out components inside the App */
+  flex-direction: column; /* Stack components vertically */
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: rgba(40, 44, 52, 0.8); /* Slight opacity for the header background */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Optional: Style for the See All Posts Link */
+.see-all-posts {.bill-card {
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .bill-card {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 576px) {
+  .bill-card {
+    max-width: 95%;
+  }
+}
+
+  color: #007bff;
+  font-weight: bold;
+}
+
+.see-all-posts:hover {
+  text-decoration: underline;
+}

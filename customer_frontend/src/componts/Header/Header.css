@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Protest+Revolution&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Dancing+Script:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+.header-carousel {
+  position: relative;
+}
+
+.carousel-image-container {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.carousel-image {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.dark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.carousel-caption {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(3px);
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 80%;
+  width: 90%;
+  z-index: 2;
+  box-sizing: border-box;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-caption h2 {
+  font-family: 'Protest Revolution', sans-serif;
+  font-size: 4rem;
+  font-weight: bold;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.carousel-caption .logo {
+  max-width: 150px;
+  margin-bottom: 1.5rem;
+}
+
+.carousel-caption p {
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  font-weight: 500;
+  font-family: "Cormorant Garamond", serif;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive styles */
+@media (max-width: 1200px) {
+  .carousel-caption h2 {
+    font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .carousel-caption h2 {
+    font-size: 3rem;
+  }
+  
+  .carousel-caption p {
+    font-size: 1.3rem;
+  }
+  
+  .carousel-caption .logo {
+    max-width: 130px;
+  }
+}
+
+@media (max-width: 768px) {
+  .carousel-image-container {
+    height: 70vh;
+  }
+  
+  .carousel-caption {
+    padding: 1.5rem;
+    width: 90%;
+  }
+  
+  .carousel-caption h2 {
+    font-size: 2.5rem;
+    white-space: normal;
+  }
+  
+  .carousel-caption p {
+    font-size: 1.2rem;
+  }
+  
+  .carousel-caption .logo {
+    max-width: 100px;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .carousel-image-container {
+    height: 60vh;
+  }
+  
+  .carousel-caption {
+    padding: 1rem;
+    width: 95%;
+  }
+  
+  .carousel-caption h2 {
+    font-size: 2rem;
+  }
+  
+  .carousel-caption p {
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+  
+  .carousel-caption .logo {
+    max-width: 80px;
+    margin-bottom: 0.5rem;
+  }
+}

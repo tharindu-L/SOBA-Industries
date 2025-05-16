@@ -1,0 +1,278 @@
+.custom-navbar {
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.1) !important; /* Semi-transparent black */
+  transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+.custom-navbar .container-fluid {
+  max-width: 95%;
+}
+
+/* Increase font size and add spacing between navbar links */
+.custom-nav .nav-link {
+  font-size: 18px; /* Increased font size */
+  margin-right: 40px; /* Increased spacing between nav items */
+  font-weight: 700;
+  color: white;
+}
+
+.image-container {
+  display: flex;
+  gap: 40px; /* Adds space between the images */
+  align-items: center; /* Centers images horizontally */
+  position: relative;
+}
+
+.image-container img {
+  width: 100%; /* Makes the images smaller, adjust as needed */
+  max-width: 200px; /* Sets a max width for the images */
+  object-fit: cover; /* Ensures the image aspect ratio is preserved */
+  cursor: pointer;
+}
+
+/* Overlay styles */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index:999;
+}
+.btn-e-magazine-ms-lg-3{
+  width: 150%;
+}
+
+@media (max-width: 768px) and (min-width: 250px) {
+  .custom-navbar .container-fluid {
+    max-width: 100%;
+  }
+  
+  .image-container {
+    flex-direction: column; /* Stacks images vertically on small screens */
+    align-items: center; /* Centers the images */
+  }
+
+  .image-container img {
+    width: 15%; /* Increases the image width for smaller screens */
+    max-width: 200px; /* Keeps the max width for small screens */
+    margin-left: -35px;
+  }
+  
+}
+
+@media (max-width: 1106px) and (min-width:769px) {
+  .custom-navbar .container-fluid {
+    max-width: 100%;
+  }
+  
+  .image-container {
+    flex-direction: column; /* Stacks images vertically on small screens */
+    align-items: center; /* Centers the images */
+  }
+
+  .image-container img {
+    width: 10%; /* Increases the image width for smaller screens */
+    max-width: 200px; /* Keeps the max width for small screens */
+    margin-left: -35px;
+  }
+  .dropdown-menu-custom {
+    
+    left: 0;   /* Align the dropdown to the right of the image container */
+    
+    
+  }
+}
+/* Style for the Login/Signup Modal */
+.modal-content {
+  border-radius: 12px; /* Rounded corners for the modal */
+  padding: 30px; /* Add padding inside the modal */
+  background-color: #f8f9fa; /* Light background color */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for the modal */
+  border: none; /* Remove the border of the modal */
+}
+
+/* Header styles */
+.modal-header {
+  border-bottom: 1px solid #e0e0e0; /* Subtle line separating header */
+  padding-bottom: 10px;
+}
+
+/* Title styling inside modal header */
+.modal-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #343a40; /* Dark color for title */
+}
+
+/* Body of the modal */
+.modal-body {
+  padding-top: 20px;
+}
+
+/* Input Fields styling */
+.form-control {
+  border-radius: 8px; /* Rounded input fields */
+  padding: 12px 20px; /* Comfortable padding */
+  font-size: 16px; /* Larger text for inputs */
+  border: 1px solid #ccc; /* Light border for inputs */
+  margin-bottom: 15px; /* Space between fields */
+  transition: border-color 0.3s ease-in-out; /* Smooth transition */
+}
+
+/* Focus effect on input fields */
+.form-control:focus {
+  border-color: #007bff; /* Blue border on focus */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Soft blue glow on focus */
+}
+
+/* Submit Button styling */
+button[type="submit"] {
+  background-color: #007bff; /* Blue background color */
+  color: white; /* White text */
+  padding: 12px 0; /* Vertical padding */
+  font-size: 16px;
+  border: none;
+  border-radius: 8px; /* Rounded corners */
+  width: 100%; /* Full width of the modal */
+  transition: background-color 0.3s ease; /* Smooth color change on hover */
+}
+
+button[type="submit"]:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Button text link (for switching between login and signup) */
+button[type="link"] {
+  color: #007bff; /* Blue link */
+  text-decoration: none;
+  font-size: 14px;
+  padding: 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 15px; /* Add space between form and the link */
+}
+.mt-2{
+  color:tomato;
+}
+/* Error alert styling */
+.alert {
+  margin-bottom: 15px; /* Space between alert and other form elements */
+  font-size: 14px;
+}
+
+/* Small adjustments for mobile view */
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 20px; /* Less padding on small screens */
+  }
+
+  .modal-title {
+    font-size: 20px; /* Smaller title for small screens */
+  }
+
+  .form-control {
+    font-size: 14px; /* Smaller input text on smaller screens */
+    padding: 10px 15px; /* Adjust padding */
+  }
+
+  button[type="submit"] {
+    font-size: 14px; /* Smaller button text */
+  }
+  .dropdown-menu-custom {
+    
+    left: 0;   /* Align the dropdown to the right of the image container */
+    
+    
+  }
+}
+/* Navbar.css */
+
+/* In Navbar.css */
+
+/* Style for the dropdown menu to appear to the right of the profile image */
+/* In Navbar.css */
+
+/* Container for the profile images */
+
+
+/* Style for the dropdown menu to appear to the right of the profile image */
+.dropdown-menu-custom {
+  position: absolute;
+  top: 100%;  /* Place it right below the image */
+  right: 0;   /* Align the dropdown to the right of the image container */
+  transform: translateY(10px); /* Space between image and dropdown */
+  min-width: 200px; /* Adjust the width of the dropdown */
+  background-color: #343a40;  /* Dark background to match navbar */
+  border-radius: 5px; /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);  /* Subtle shadow */
+  z-index: 9999;  /* Ensure the dropdown stays above other content */
+  opacity: 0;  /* Initially hidden */
+  visibility: hidden;  /* Initially hidden */
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;  /* Smooth transition */
+}
+
+/* Style the dropdown items */
+.dropdown-item {
+  padding: 12px 16px; /* Add padding for larger clickable area */
+  color: #fff; /* White text color */
+  cursor: pointer;
+  font-size: 16px; /* Set font size */
+  text-align: left;  /* Align text to the left */
+  transition: background-color 0.3s ease, padding-left 0.2s ease; /* Smooth transition */
+  border-radius: 5px;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f1f1;  /* Optional: Change background color on hover */
+}
+.image-container:hover .dropdown-menu-custom,
+.dropdown-menu-custom.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease; /* Instant visibility */
+}
+
+/* Base styles for the navbar */
+.custom-navbar {
+  transition: background-color 0.3s ease;
+}
+
+/* Transparent background for homepage */
+.custom-navbar.bg-transparent {
+  background-color: transparent !important;
+}
+
+/* Dark background for other pages */
+.custom-navbar.bg-dark {
+  background-color: #343a40 !important;
+}
+
+/* Navbar Links */
+.custom-nav .nav-link {
+  color: white !important; /* Links are white */
+}
+
+.custom-nav .nav-link:hover {
+  color: #ffcc00 !important; /* Yellow on hover */
+}
+.switch-form-link{
+  color: tomato;
+  cursor: pointer;
+  text-decoration:underline;
+}
+/* Default size for the image */
+.image-container img {
+  width: auto;
+  height: auto;
+}
+
+/* Media query for screen sizes between 991px and 1105px */
+@media (max-width: 1105px) and (min-width: 991px) {
+  .image-container img {
+    width: 50px;   /* Set width to 200px */
+    height: 50px;  /* Set height to 200px */
+  }
+}

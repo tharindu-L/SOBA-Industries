@@ -1,0 +1,228 @@
+/* Import Poppins font at the top of your CSS file */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+.footer {
+    background-color: black; /* Dark background for the footer */
+    color: white; /* White text color */
+    padding: 20px; /* Padding around the footer content */
+    text-align: left; /* Align text to the left */
+    font-family: 'Poppins', sans-serif; /* Apply Poppins font */
+}
+
+/* This container will handle the layout of the footer content */
+.footer-content {
+    display: flex;
+    flex-wrap: wrap; /* Allow items to wrap for better responsiveness */
+    justify-content: flex-start; /* Align items to the start (left) */
+    max-width: 1200px; /* Max width for large screens */
+    margin: 0 auto; /* Center align the footer content horizontally */
+}
+
+/* Each section of the footer */
+.footer-content-left,
+.footer-content-center,
+.footer-content-right {
+    flex: 1; /* Allow each section to grow */
+    margin: 10px; /* Margin around each section */
+    min-width: 200px; /* Minimum width for smaller screens */
+    font-family: 'Poppins', sans-serif; /* Apply Poppins font */
+}
+
+.footer-content-left {
+    margin-top: -5px;
+    
+}
+
+
+/* Logo styling */
+.footer-logo {
+    max-width: 150px; /* Limit logo size */
+    margin-bottom: 10px; /* Space below logo */
+    margin-top: 20px; /* Space above logo */
+}
+
+.footer-logo2 {
+    max-width: 40px; /* Limit logo size */
+    margin-bottom: 10px; /* Space below logo */
+    margin-top: 20px;
+    margin-left: 20px; /* Space above logo */
+}
+.footer-logo3 {
+    max-width: 60px; /* Limit logo size */
+    margin-bottom: 10px; /* Space below logo */
+    margin-top: 20px;
+    margin-left: 20px; /* Space above logo */
+}
+
+
+/* Description text styling */
+.footer-description {
+    font-size: 14px; /* Adjust font size for better readability */
+}
+
+/* Social icons styling */
+.footer-social-icons {
+    margin-top: 10px; /* Space above social icons */
+}
+
+.footer-social-icons a {
+    margin: 0 10px; /* Space between icons */
+    display: inline-block;
+}
+
+.footer-social-icons img {
+    width: 30px; /* Size of social media icons */
+    height: 30px; /* Size of social media icons */
+}
+
+/* Styling for lists */
+.footer-content-center ul,
+.footer-content-right ul {
+    list-style-type: none; /* Remove bullet points */
+    padding: 0; /* Remove padding */
+}
+
+.footer-content-center li,
+.footer-content-right li {
+    margin-bottom: 3px; /* Space between list items */
+    font-family: 'Poppins', sans-serif; /* Apply Poppins font */
+}
+
+.footer-content h2 {
+    font-weight: 700; /* Font weight for section headings */
+    font-family: 'Poppins', sans-serif; /* Apply Poppins font */
+    font-size: 24px;
+}
+
+/* Link styling */
+.footer-content-center a,
+.footer-content-right a {
+    color: white; /* White text color for links */
+    text-decoration: none; /* Remove underline from links */
+}
+
+.footer-content-right {
+    margin-top: 8px;
+}
+
+.footer-content-center {
+    margin-left: 150px; /* Margin for center content */
+}
+
+.footer-content-center a:hover,
+.footer-content-right a:hover {
+    text-decoration: underline; /* Underline on hover */
+}
+
+.contact {
+    display: flex;
+    align-items: self-end;
+    gap: 15px; /* Space between icon and text */
+}
+.contact1 {
+    display: flex;
+   
+    gap: 15px; /* Space between icon and text */
+}
+
+
+.footer-content-right img {
+    display: flex;
+    margin-top: 10px; /* Space above icons */
+    width: 25px; /* Size of icons */
+    height: 25px;
+}
+
+.footer-copyright {
+    text-align: center; /* Center align copyright text */
+}
+
+/* Copyright styling */
+.footer-copyright {
+    margin-top: 20px; /* Space above copyright text */
+    font-size: 12px; /* Smaller font size for copyright */
+}
+
+.footer p {
+    font-weight: 400;
+}
+
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column; /* Stack items vertically on smaller screens */
+        align-items: center; /* Center align content */
+    }
+
+    .footer-content-left,
+    .footer-content-center,
+    .footer-content-right {
+        text-align: center; /* Center align text for smaller screens */
+    }
+
+    .footer-content-center {
+        margin-left: 0; /* Remove left margin on smaller screens */
+    }
+
+    .footer-content-right ul {
+        display: flex;
+        flex-direction: column; /* Stack contact information vertically */
+        align-items: center; /* Center align contact information */
+        padding: 0; /* Remove padding */
+    }
+
+    .contact1 {
+        flex-direction: column; /* Ensure contact items are stacked vertically */
+        gap: 10px; /* Space between icon and text */
+        align-items: center;
+    }
+    .contact {
+        flex-direction: column; /* Ensure contact items are stacked vertically */
+        gap: 10px; /* Space between icon and text */
+        align-items: center;
+    }
+}
+
+@media (max-width: 320px) {
+    .footer-logo {
+        max-width: 100px; /* Limit logo size */
+    }
+}
+
+@media (max-width: 991.5px) {
+    .footer-content {
+        flex-direction: column; /* Stack items vertically on smaller screens */
+        align-items: center; /* Center align content */
+    }
+
+    .footer-content-left,
+    .footer-content-center,
+    .footer-content-right {
+        text-align: center; /* Center align text for smaller screens */
+    }
+
+    .footer-content-center {
+        margin-left: 0; /* Remove left margin on smaller screens */
+    }
+
+    .footer-content-right ul {
+        display: flex;
+        flex-direction: column; /* Stack contact information vertically */
+        align-items: center; /* Center align contact information */
+        padding: 0; /* Remove padding */
+    }
+
+    .contact1 {
+        flex-direction: column; /* Ensure contact items are stacked vertically */
+        gap: 10px; /* Space between icon and text */
+        align-items: center;
+    }
+    .contact {
+        flex-direction: column; /* Ensure contact items are stacked vertically */
+        gap: 10px; /* Space between icon and text */
+        align-items: center;
+    }
+}
