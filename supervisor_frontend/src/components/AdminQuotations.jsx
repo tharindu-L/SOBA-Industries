@@ -28,52 +28,136 @@ const AdminQuotations = () => {
   const [orders, setOrders] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [materialItems, setMaterialItems] = useState([]);
   const [serviceCharge, setServiceCharge] = useState(0);
   const [status, setStatus] = useState('pending');
   const [stockErrors, setStockErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('customerId');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [invoiceData, setInvoiceData] = useState({});
+  const [refreshInterval, setRefreshInterval] = useState(null);
 
   // Fetch Orders
-  useEffect(() => {
-    const fetchOrders = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('http://localhost:4000/api/order/all_custom_order', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        const data = await response.json();
-        if (data.success) {
-          setOrders(data.orders || []);
-        } else {
-          setError(data.message || 'Failed to fetch orders');
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:4000/api/order/all_custom_order', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Cache-Control': 'no-cache' // Prevent caching
         }
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-        setError('Network error while fetching orders');
-      } finally {
-        setIsLoading(false);
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    };
+      
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.orders || []);
+        
+        // Fetch invoices for these orders to get customer approval status
+        await fetchInvoicesForOrders(data.orders || []);
+      } else {
+        setError(data.message || 'Failed to fetch orders');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setError('Network error while fetching orders. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Enhanced and fixed fetchInvoicesForOrders function
+  const fetchInvoicesForOrders = async () => {
+    try {
+      console.log("Fetching invoice data...");
+      
+      // Use a timestamp to bust cache completely
+      const timestamp = new Date().getTime();
+      const response = await fetch(`http://localhost:4000/api/quotation/get_all?t=${timestamp}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        // Important: Disable caching at fetch level
+        cache: 'no-store'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Raw response data:", data);
+      
+      if (data.success) {
+        console.log("Received invoice data:", data.invoices);
+        
+        // Create a map of order IDs to invoice data with their approval status
+        const invoiceMap = {};
+        data.invoices.forEach(invoice => {
+          console.log(`Invoice ID ${invoice.invoice_id} for order ${invoice.quotation_id}:`, invoice);
+          console.log(`Approval status: ${invoice.customer_approval_status}`);
+          
+          invoiceMap[invoice.quotation_id] = {
+            invoiceId: invoice.invoice_id,
+            approvalStatus: invoice.customer_approval_status || 'pending'
+          };
+        });
+        
+        console.log("Final invoice map:", invoiceMap);
+        setInvoiceData(invoiceMap);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    }
+  };
+
+  useEffect(() => {
+    console.log("Component mounted - fetching initial data");
     fetchOrders();
-  }, []);
+    
+    // Set up an interval to refresh data every 10 seconds (reduced from 15 to see changes faster)
+    const interval = setInterval(() => {
+      console.log("Auto-refresh triggered");
+      fetchInvoicesForOrders(); // Only refresh invoice data to reduce load
+    }, 10000); // 10 seconds refresh interval
+    
+    setRefreshInterval(interval);
+    
+    // Clear interval on component unmount
+    return () => {
+      console.log("Component unmounting - clearing interval");
+      clearInterval(interval); // Use the interval directly, not the state which might be outdated
+    };
+  }, []); // Empty dependency array ensures this only runs once on mount
 
   // Fetch Materials
   const fetchMaterials = async () => {
+    setError(null);
     try {
       const response = await fetch('http://localhost:4000/api/material/get_all', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
       const data = await response.json();
       if (data.success) {
         setMaterials(data.materials);
@@ -94,7 +178,7 @@ const AdminQuotations = () => {
       }
     } catch (error) {
       console.error('Error fetching materials:', error);
-      setError('Failed to fetch materials');
+      setError('Failed to fetch materials. Please try again later.');
     }
   };
 
@@ -102,7 +186,11 @@ const AdminQuotations = () => {
     setCurrentOrder(order);
     setStatus(order.status || 'pending');
     setServiceCharge(0); // Reset service charge when opening modal
+    setMaterialItems([]); // Reset material items
+    setStockErrors({});
+    setError(null);
     setShowModal(true);
+    
     if (order.status === 'in_progress' || status === 'in_progress') {
       fetchMaterials();
     }
@@ -168,14 +256,44 @@ const AdminQuotations = () => {
     return materialsTotal + parseFloat(serviceCharge || 0);
   };
 
+  const validateOrderUpdate = () => {
+    if (status === 'in_progress') {
+      // Check if there are any stock errors
+      if (Object.keys(stockErrors).length > 0) {
+        setError('Please correct the quantities that exceed available stock');
+        return false;
+      }
+      
+      // Validate materials selection
+      if (materialItems.length === 0) {
+        setError('Please add at least one material for approved orders');
+        return false;
+      }
+      
+      // Check for zero quantities
+      const hasZeroQuantity = materialItems.some(item => !item.quantity || item.quantity <= 0);
+      if (hasZeroQuantity) {
+        setError('Material quantities must be greater than zero');
+        return false; 
+      }
+    }
+    
+    // If status is becoming cancelled, show confirmation
+    if (status === 'cancelled') {
+      setShowConfirmModal(true);
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async () => {
-    // Check if there are any stock errors before submitting (only for in_progress status)
-    if (status === 'in_progress' && Object.keys(stockErrors).length > 0) {
-      setError('Please correct the quantities that exceed available stock');
+    // Validate before submission
+    if (!validateOrderUpdate()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError(null);
 
     try {
@@ -192,33 +310,27 @@ const AdminQuotations = () => {
         }),
       });
 
+      if (!statusResponse.ok) {
+        throw new Error(`HTTP error! Status: ${statusResponse.status}`);
+      }
+
       const statusData = await statusResponse.json();
       if (!statusData.success) {
-        throw new Error('Failed to update order status');
+        throw new Error(statusData.message || 'Failed to update order status');
       }
 
       // Only proceed with invoice creation and stock reduction if status is in_progress
       if (status === 'in_progress') {
-        // Validate materials are selected
-        if (materialItems.length === 0) {
-          throw new Error('Please add at least one material for approved orders');
-        }
-
         // Prepare materials data with all required fields
         const materialsData = materialItems.map(item => {
-          if (!item.material_name) {
-            // Find the material name if it's missing
-            const material = materials.find(m => m.item_id === item.material_id);
-            if (material) {
-              item.material_name = material.item_name;
-            } else {
-              throw new Error(`Material not found for ID: ${item.material_id}`);
-            }
-          }
+          const material = materials.find(m => m.item_id === item.material_id);
+          if (!material) {
+            throw new Error(`Material not found for ID: ${item.material_id}`);
+          };
           
           return {
             material_id: item.material_id,
-            material_name: item.material_name,
+            material_name: material.item_name,
             quantity: item.quantity,
             unit_price: item.unit_price
           };
@@ -239,6 +351,10 @@ const AdminQuotations = () => {
           }),
         });
 
+        if (!invoiceResponse.ok) {
+          throw new Error(`HTTP error! Status: ${invoiceResponse.status}`);
+        }
+
         const invoiceData = await invoiceResponse.json();
         if (!invoiceData.success) {
           throw new Error(invoiceData.message || 'Failed to create invoice');
@@ -248,25 +364,25 @@ const AdminQuotations = () => {
         await reduceMaterialStock(materialItems);
       }
 
-      // Refresh orders list
-      const refreshResponse = await fetch('http://localhost:4000/api/order/all_custom_order', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const refreshData = await refreshResponse.json();
-      if (refreshData.success) {
-        setOrders(refreshData.orders);
-      }
-
+      // Show success message and refresh orders
+      setSuccessMessage(`Order #${currentOrder.orderId} has been successfully ${status === 'in_progress' ? 'approved' : status}`);
+      await fetchOrders();
       handleCloseModal();
+      
+      // Clear success message after a few seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
       
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      setError(error.message || 'An error occurred during submission');
+      setError(error.message || 'An error occurred during submission. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCancelConfirmation = async () => {
+    setShowConfirmModal(false);
+    await handleSubmit();
   };
 
   const reduceMaterialStock = async (items) => {
@@ -280,6 +396,10 @@ const AdminQuotations = () => {
 
         const newQuantity = material.available_qty - item.quantity;
         
+        if (newQuantity < 0) {
+          throw new Error(`Not enough stock available for ${material.item_name}`);
+        }
+        
         const response = await fetch('http://localhost:4000/api/material/update_all', {
           method: 'PUT',
           headers: { 
@@ -292,9 +412,13 @@ const AdminQuotations = () => {
           }),
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
         const data = await response.json();
         if (!data.success) {
-          console.error(`Error updating stock for: ${item.material_name}`);
+          throw new Error(`Error updating stock for: ${material.item_name}`);
         }
       });
 
@@ -317,16 +441,55 @@ const AdminQuotations = () => {
     }]);
   };
 
+  const removeMaterialItem = (index) => {
+    if (materialItems.length <= 1) return;
+    
+    const updatedItems = materialItems.filter((_, i) => i !== index);
+    setMaterialItems(updatedItems);
+    
+    // Update error states
+    setStockErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[index];
+      // Reindex the errors if needed
+      const reindexedErrors = {};
+      Object.keys(newErrors).forEach(key => {
+        const keyNum = parseInt(key);
+        if (keyNum > index) {
+          reindexedErrors[keyNum - 1] = newErrors[key];
+        } else {
+          reindexedErrors[key] = newErrors[key];
+        }
+      });
+      return reindexedErrors;
+    });
+  };
+
   // Filter orders based on search term
   const filteredOrders = orders.filter(order => 
-    order.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.orderId.toString().includes(searchTerm.toLowerCase()) ||
-    order.status.toLowerCase().includes(searchTerm.toLowerCase())
+    (order.description && order.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (order.customerId && order.customerId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (order.orderId && order.orderId.toString().includes(searchTerm.toLowerCase())) ||
+    (order.status && order.status.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Sort orders
   const sortedOrders = [...filteredOrders].sort((a, b) => {
+    if (!a[sortField]) return sortDirection === 'asc' ? 1 : -1;
+    if (!b[sortField]) return sortDirection === 'asc' ? -1 : 1;
+    
+    if (sortField === 'createdAt') {
+      return sortDirection === 'asc' 
+        ? new Date(a.createdAt) - new Date(b.createdAt)
+        : new Date(b.createdAt) - new Date(a.createdAt);
+    }
+
+    if (a[sortField].toLowerCase && b[sortField].toLowerCase) {
+      return sortDirection === 'asc'
+        ? a[sortField].toLowerCase().localeCompare(b[sortField].toLowerCase())
+        : b[sortField].toLowerCase().localeCompare(a[sortField].toLowerCase());
+    }
+
     if (a[sortField] < b[sortField]) return sortDirection === 'asc' ? -1 : 1;
     if (a[sortField] > b[sortField]) return sortDirection === 'asc' ? 1 : -1;
     return 0;
@@ -342,30 +505,98 @@ const AdminQuotations = () => {
     }
   };
 
-  // Status badge renderer
-  const renderStatusBadge = (status) => {
+  // Status badge renderer with approval status
+  const renderStatusBadge = (status, orderId) => {
+    // First render the order status badge
+    let orderStatusBadge;
+    
     switch (status) {
       case 'completed':
-        return (
+        orderStatusBadge = (
           <Badge bg="success">
             <FileEarmarkCheck className="me-1" /> Completed
           </Badge>
         );
+        break;
+      case 'cancelled':
+        orderStatusBadge = (
+          <Badge bg="danger">
+            <XCircle className="me-1" /> Cancelled
+          </Badge>
+        );
+        break;
+      case 'in_progress':
+        orderStatusBadge = (
+          <Badge bg="primary">
+            <Clock className="me-1" /> Approved
+          </Badge>
+        );
+        break;
+      default:
+        orderStatusBadge = (
+          <Badge bg="warning" text="dark">
+            <Clock className="me-1" /> Pending
+          </Badge>
+        );
+        break;
+    }
+    
+    // Then check if we have an invoice with approval status for this order
+    const invoiceInfo = invoiceData[orderId];
+    if (invoiceInfo && status === 'in_progress') {
+      let approvalBadge;
+      
+      switch (invoiceInfo.approvalStatus) {
+        case 'approved':
+          approvalBadge = <Badge bg="success" className="ms-2">Customer Approved</Badge>;
+          break;
+        case 'cancelled':
+          approvalBadge = <Badge bg="danger" className="ms-2">Customer Cancelled</Badge>;
+          break;
+        default:
+          approvalBadge = <Badge bg="warning" text="dark" className="ms-2">Approval Pending</Badge>;
+          break;
+      }
+      
+      return (
+        <div>
+          {orderStatusBadge} {approvalBadge}
+        </div>
+      );
+    }
+    
+    return orderStatusBadge;
+  };
 
+  // Update renderApprovalBadge to improve debugging
+  const renderApprovalBadge = (orderId) => {
+    const invoiceInfo = invoiceData[orderId];
+    
+    console.log(`Rendering approval badge for order ${orderId}:`, invoiceInfo);
+    
+    if (!invoiceInfo || !invoiceInfo.approvalStatus) {
+      return (
+        <Badge bg="secondary">
+          Not Required
+        </Badge>
+      );
+    }
+
+    switch (invoiceInfo.approvalStatus) {
+      case 'approved':
+        return (
+          <Badge bg="success">
+            <CheckCircle className="me-1" /> Approved
+          </Badge>
+        );
+      
       case 'cancelled':
         return (
           <Badge bg="danger">
             <XCircle className="me-1" /> Cancelled
           </Badge>
         );
-
-      case 'in_progress':
-        return (
-          <Badge bg="primary">
-            <Clock className="me-1" /> Approved
-          </Badge>
-        );
-
+      
       default:
         return (
           <Badge bg="warning" text="dark">
@@ -375,16 +606,54 @@ const AdminQuotations = () => {
     }
   };
 
+  // Add a manual refresh button for invoice approvals
+  const handleRefreshApprovals = () => {
+    fetchInvoicesForOrders();
+  };
+
   return (
     <Container fluid className="py-4" style={styles.pageContainer} >
       <Card className="shadow-sm">
         <Card.Header className="bg-primary text-white">
           <div className="d-flex justify-content-between align-items-center">
             <h2 className="mb-0">Order Management</h2>
+            <div>
+              <Button 
+                variant="outline-light" 
+                size="sm" 
+                className="me-2"
+                onClick={handleRefreshApprovals}
+                title="Refresh customer approvals"
+              >
+                <i className="bi bi-arrow-clockwise"></i> Refresh Approvals
+              </Button>
+              <Button 
+                variant="outline-light" 
+                size="sm"
+                onClick={fetchOrders}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Spinner animation="border" size="sm" />
+                ) : (
+                  'Refresh All'
+                )}
+              </Button>
+            </div>
           </div>
         </Card.Header>
         <Card.Body style={styles.cardBody}>
-          {error && <Alert variant="danger">{error}</Alert>}
+          {successMessage && (
+            <Alert variant="success" dismissible onClose={() => setSuccessMessage(null)}>
+              <CheckCircle className="me-2" /> {successMessage}
+            </Alert>
+          )}
+          
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError(null)}>
+              <XCircle className="me-2" /> {error}
+            </Alert>
+          )}
           
           <Row className="mb-4">
             <Col md={6}>
@@ -441,6 +710,8 @@ const AdminQuotations = () => {
                         <span className="ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </th>
+                    {/* Add new column for Customer Approval */}
+                    <th>Customer Approval</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -456,7 +727,11 @@ const AdminQuotations = () => {
                         <td>
                           {order.specialNotes ? (
                             order.specialNotes.length > 20 
-                              ? `${order.specialNotes.substring(0, 20)}...` 
+                              ? (
+                                <span title={order.specialNotes}>
+                                  {order.specialNotes.substring(0, 20)}...
+                                </span>
+                              ) 
                               : order.specialNotes
                           ) : '-'}
                         </td>
@@ -466,6 +741,7 @@ const AdminQuotations = () => {
                               href={`http://localhost:4000/images/${order.designFiles[0]}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-secondary"
                             >
                               View File
                             </a>
@@ -473,11 +749,22 @@ const AdminQuotations = () => {
                         </td>
                         <td>{new Date(order.createdAt).toLocaleString()}</td>
                         <td>{renderStatusBadge(order.status)}</td>
+                        {/* New cell for Customer Approval */}
+                        <td>
+                          {renderApprovalBadge(order.orderId)}
+                          {order.status === 'in_progress' && !invoiceData[order.orderId] && (
+                            <div className="mt-1">
+                              <small className="text-muted">No invoice found</small>
+                            </div>
+                          )}
+                        </td>
                         <td>
                           <Button 
                             variant="outline-primary" 
                             size="sm"
                             onClick={() => handleUpdateClick(order)}
+                            disabled={order.status === 'completed' || order.status === 'cancelled' || 
+                                     (invoiceData[order.orderId]?.approvalStatus === 'cancelled')}
                           >
                             Update
                           </Button>
@@ -486,7 +773,7 @@ const AdminQuotations = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="text-center py-4">
+                      <td colSpan="11" className="text-center py-4"> {/* Update colspan to match new column count */}
                         {searchTerm 
                           ? "No orders match your search criteria" 
                           : "No orders available"}
@@ -515,9 +802,13 @@ const AdminQuotations = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {error && <Alert variant="danger">{error}</Alert>}
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           
-          {isLoading && showModal ? (
+          {isSubmitting ? (
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" />
               <p className="mt-2">Processing...</p>
@@ -526,9 +817,9 @@ const AdminQuotations = () => {
             <Form>
               <Form.Group controlId="status" className="mb-4">
                 <Form.Label>Update Status</Form.Label>
-                <div className="d-flex">
+                <div className="d-flex flex-wrap">
                   {statusOptions.map(option => (
-                    <div key={option} className="form-check form-check-inline me-3">
+                    <div key={option} className="form-check form-check-inline me-3 mb-2">
                       <input
                         className="form-check-input"
                         type="radio"
@@ -537,6 +828,12 @@ const AdminQuotations = () => {
                         value={option}
                         checked={status === option}
                         onChange={(e) => setStatus(e.target.value)}
+                        disabled={
+                          // Prevent changes to completed/cancelled orders
+                          (currentOrder && (currentOrder.status === 'completed' || currentOrder.status === 'cancelled')) ||
+                          // Prevent status changes that make no sense (e.g., from in_progress to pending)
+                          (currentOrder && currentOrder.status === 'in_progress' && option === 'pending')
+                        }
                       />
                       <label className="form-check-label" htmlFor={`status${option}`}>
                         {renderStatusBadge(option)}
@@ -635,15 +932,9 @@ const AdminQuotations = () => {
                                   <Button 
                                     variant="outline-danger" 
                                     size="sm"
-                                    onClick={() => {
-                                      setMaterialItems(materialItems.filter((_, i) => i !== index));
-                                      setStockErrors(prev => {
-                                        const newErrors = {...prev};
-                                        delete newErrors[index];
-                                        return newErrors;
-                                      });
-                                    }}
+                                    onClick={() => removeMaterialItem(index)}
                                     disabled={materialItems.length <= 1}
+                                    title="Remove item"
                                   >
                                     <Trash />
                                   </Button>
@@ -692,19 +983,21 @@ const AdminQuotations = () => {
           )}
         </Modal.Body>
         <Modal.Footer className="bg-light">
-          <Button variant="secondary" onClick={handleCloseModal} disabled={isLoading}>
+          <Button variant="secondary" onClick={handleCloseModal} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button 
             variant={status === 'cancelled' ? "danger" : "primary"}
             onClick={handleSubmit}
             disabled={
-              isLoading || 
+              isSubmitting || 
               (status === 'in_progress' && Object.keys(stockErrors).length > 0) || 
-              (status === 'in_progress' && materialItems.length === 0)
+              (status === 'in_progress' && materialItems.length === 0) ||
+              // Prevent updates to already completed/cancelled orders
+              (currentOrder && (currentOrder.status === 'completed' || currentOrder.status === 'cancelled'))
             }
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <>
                 <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-1" />
                 Processing...
@@ -712,6 +1005,29 @@ const AdminQuotations = () => {
             ) : (
               status === 'cancelled' ? 'Cancel Order' : 'Update Order'
             )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Confirmation Modal for Cancellation */}
+      <Modal 
+        show={showConfirmModal} 
+        onHide={() => setShowConfirmModal(false)}
+        backdrop="static"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Order Cancellation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to cancel Order #{currentOrder?.orderId}? This action cannot be undone.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+            No, Keep Order
+          </Button>
+          <Button variant="danger" onClick={handleCancelConfirmation}>
+            Yes, Cancel Order
           </Button>
         </Modal.Footer>
       </Modal>

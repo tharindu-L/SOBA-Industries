@@ -117,11 +117,13 @@ export const createInvoice = async (req, res) => {
   const { quotationId, invoiceAmount, materials } = req.body;
 
   try {
-    // Create the invoice with paid_amount and payment_status
+    // Ensure we're explicitly including customer_approval_status in the INSERT statement
     const [invoiceResult] = await pool.query(
-      'INSERT INTO invoices (quotation_id, total_amount, paid_amount, payment_status) VALUES (?, ?, 0, "Pending")',
+      'INSERT INTO invoices (quotation_id, total_amount, paid_amount, payment_status, customer_approval_status) VALUES (?, ?, 0, "Pending", "pending")',
       [quotationId, invoiceAmount]
     );
+    
+    console.log("Invoice created with ID:", invoiceResult.insertId);
 
     // Add materials to the invoice
     for (const material of materials) {
@@ -192,7 +194,7 @@ export const getInvoicesByUserId = async (req, res) => {
   }
 
   try {
-    // Fetch all invoices for the specific user with related custom order details
+    // Fetch all invoices for the specific user with related custom order details - include customer_approval_status
     const [invoices] = await pool.query(
       `SELECT 
         i.id AS invoice_id,
@@ -200,6 +202,7 @@ export const getInvoicesByUserId = async (req, res) => {
         i.total_amount,
         i.paid_amount,
         i.payment_status,
+        i.customer_approval_status,
         i.created_at,
         co.customer_id, 
         co.description AS job_description,
@@ -245,7 +248,9 @@ export const getInvoicesByUserId = async (req, res) => {
 
 export const getAllInvoicesAdmin = async (req, res) => {
   try {
-    // Fetch all invoices with custom order details for admin view
+    console.log("Fetching all invoices for admin...");
+    
+    // Make sure the query explicitly selects customer_approval_status
     const [invoices] = await pool.query(
       `SELECT 
         i.id AS invoice_id,
@@ -254,6 +259,7 @@ export const getAllInvoicesAdmin = async (req, res) => {
         i.created_at,
         i.paid_amount,
         i.payment_status,
+        i.customer_approval_status, 
         co.customer_id,
         co.description AS job_description,
         co.status AS order_status
@@ -261,6 +267,15 @@ export const getAllInvoicesAdmin = async (req, res) => {
       JOIN custom_orders co ON i.quotation_id = co.order_id
       ORDER BY i.created_at DESC`
     );
+
+    // Debug: Check if we have customer_approval_status in the results
+    console.log("Invoices fetched:", invoices.length);
+    if (invoices.length > 0) {
+      console.log("First invoice:", {
+        id: invoices[0].invoice_id,
+        approval: invoices[0].customer_approval_status || 'not set'
+      });
+    }
 
     // Fetch invoice items for each invoice
     const invoiceDetails = await Promise.all(
@@ -286,10 +301,10 @@ export const getAllInvoicesAdmin = async (req, res) => {
       invoices: invoiceDetails,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error in getAllInvoicesAdmin:", err);
     return res.status(500).json({
       success: false,
-      message: "Error fetching invoices",
+      message: "Error fetching invoices"
     });
   }
 };
@@ -412,4 +427,80 @@ export const getJobsByCustomerId = async (req, res) => {
       message: 'Error fetching jobs',
     });
   }
+};
+
+// Add new endpoint to update the customer approval status
+export const updateApprovalStatus = async (req, res) => {
+  const { invoiceId, status } = req.body;
+
+  console.log(`Updating approval status for invoice ${invoiceId} to ${status}`);
+
+  if (!invoiceId || !status || !['approved', 'cancelled'].includes(status)) {
+    console.log("Invalid request parameters:", { invoiceId, status });
+    return res.status(400).json({
+      success: false,
+      message: "Invoice ID and valid status (approved or cancelled) are required"
+    });
+  }
+
+  try {
+    // Update the invoice approval status with debug logging
+    console.log(`Running SQL UPDATE for invoice ${invoiceId}`);
+    const [updateResult] = await pool.query(
+      'UPDATE invoices SET customer_approval_status = ? WHERE id = ?',
+      [status, invoiceId]
+    );
+    
+    console.log("Update result:", updateResult);
+    console.log(`Updated rows: ${updateResult.affectedRows}`);
+
+    // Verify the update by fetching the updated record
+    const [verifyUpdate] = await pool.query(
+      'SELECT id, customer_approval_status FROM invoices WHERE id = ?',
+      [invoiceId]
+    );
+    console.log("Verification of update:", verifyUpdate);
+
+    // If the status is cancelled, update the order status as well
+    if (status === 'cancelled') {
+      const [invoice] = await pool.query('SELECT quotation_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (invoice.length > 0) {
+        const quotationId = invoice[0].quotation_id;
+        console.log(`Updating order status for quotation_id ${quotationId} to cancelled`);
+        
+        const [orderUpdateResult] = await pool.query(
+          'UPDATE custom_orders SET status = "cancelled" WHERE order_id = ?',
+          [quotationId]
+        );
+        console.log("Order update result:", orderUpdateResult);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Invoice ${status === 'approved' ? 'approved' : 'cancelled'} successfully`
+    });
+  } catch (err) {
+    console.error("Error in updateApprovalStatus:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error updating invoice approval status"
+    });
+  }
+};
+
+export default {
+  createQuotation,
+  getQuotations,
+  getAllQuotationsForAdmin,
+  updateQuotationStatus,
+  createInvoice,
+  addPayment,
+  getInvoicesByUserId,
+  getAllInvoicesAdmin,
+  getInvoicesByUserId2,
+  getAllJobs,
+  updateJob,
+  getJobsByCustomerId,
+  updateApprovalStatus  // Make sure this is included
 };
