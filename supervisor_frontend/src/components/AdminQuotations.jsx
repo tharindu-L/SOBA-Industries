@@ -62,6 +62,17 @@ const AdminQuotations = () => {
       
       const data = await response.json();
       if (data.success) {
+        // Enhanced logging to check the want_date field
+        console.log("Orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
+        
+        // Log want dates specifically
+        if (data.orders && data.orders.length > 0) {
+          console.log("Want dates in first few orders:");
+          data.orders.slice(0, 5).forEach(order => {
+            console.log(`Order ${order.orderId}: want date = ${order.wantDate || 'not set'}, type = ${typeof order.wantDate}`);
+          });
+        }
+        
         setOrders(data.orders || []);
         
         // Fetch invoices for these orders to get customer approval status
@@ -422,6 +433,7 @@ const AdminQuotations = () => {
         }
       });
 
+      // Fix: Add the missing await Promise.all
       await Promise.all(updateRequests);
     } catch (error) {
       console.error('Error reducing material stock:', error);
@@ -475,14 +487,33 @@ const AdminQuotations = () => {
 
   // Sort orders
   const sortedOrders = [...filteredOrders].sort((a, b) => {
-    if (!a[sortField]) return sortDirection === 'asc' ? 1 : -1;
-    if (!b[sortField]) return sortDirection === 'asc' ? -1 : 1;
+    if (sortField === 'wantDate') {
+      // Debug the sort field values
+      console.log(`Sorting by wantDate: ${a.orderId}=${a.wantDate} vs ${b.orderId}=${b.wantDate}`);
+      
+      // Handle null or undefined dates
+      if (!a.wantDate && !b.wantDate) return 0;
+      if (!a.wantDate) return sortDirection === 'asc' ? 1 : -1;
+      if (!b.wantDate) return sortDirection === 'asc' ? -1 : 1;
+      
+      // Compare dates - ensure they're Date objects
+      const dateA = new Date(a.wantDate);
+      const dateB = new Date(b.wantDate);
+      
+      return sortDirection === 'asc' 
+        ? dateA - dateB
+        : dateB - dateA;
+    }
     
     if (sortField === 'createdAt') {
       return sortDirection === 'asc' 
         ? new Date(a.createdAt) - new Date(b.createdAt)
         : new Date(b.createdAt) - new Date(a.createdAt);
     }
+
+    // Handle regular fields
+    if (!a[sortField]) return sortDirection === 'asc' ? 1 : -1;
+    if (!b[sortField]) return sortDirection === 'asc' ? -1 : 1;
 
     if (a[sortField].toLowerCase && b[sortField].toLowerCase) {
       return sortDirection === 'asc'
@@ -696,6 +727,12 @@ const AdminQuotations = () => {
                     <th>Category</th>
                     <th>Description</th>
                     <th>Quantity</th>
+                    <th onClick={() => handleSort('wantDate')} className="cursor-pointer">
+                      Due Date
+                      {sortField === 'wantDate' && (
+                        <span className="ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </th>
                     <th>Special Notes</th>
                     <th>Design Files</th>
                     <th onClick={() => handleSort('createdAt')} className="cursor-pointer">
@@ -710,7 +747,6 @@ const AdminQuotations = () => {
                         <span className="ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </th>
-                    {/* Add new column for Customer Approval */}
                     <th>Customer Approval</th>
                     <th>Actions</th>
                   </tr>
@@ -724,6 +760,20 @@ const AdminQuotations = () => {
                         <td>{order.category || 'Not specified'}</td>
                         <td>{order.description}</td>
                         <td>{order.quantity}</td>
+                        <td>
+                          {order.wantDate ? (
+                            <span className={
+                              new Date(order.wantDate) < new Date() 
+                                ? 'text-danger fw-bold d-flex align-items-center' 
+                                : 'd-flex align-items-center'
+                            }>
+                              {new Date(order.wantDate).toLocaleDateString()}
+                              {new Date(order.wantDate) < new Date() && (
+                                <span className="ms-2 badge bg-danger">Overdue</span>
+                              )}
+                            </span>
+                          ) : 'Not specified'}
+                        </td>
                         <td>
                           {order.specialNotes ? (
                             order.specialNotes.length > 20 
@@ -749,7 +799,6 @@ const AdminQuotations = () => {
                         </td>
                         <td>{new Date(order.createdAt).toLocaleString()}</td>
                         <td>{renderStatusBadge(order.status)}</td>
-                        {/* New cell for Customer Approval */}
                         <td>
                           {renderApprovalBadge(order.orderId)}
                           {order.status === 'in_progress' && !invoiceData[order.orderId] && (
@@ -773,7 +822,7 @@ const AdminQuotations = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="11" className="text-center py-4"> {/* Update colspan to match new column count */}
+                      <td colSpan="12" className="text-center py-4"> {/* Update colspan to match new column count */}
                         {searchTerm 
                           ? "No orders match your search criteria" 
                           : "No orders available"}

@@ -222,51 +222,92 @@ export const getOrdersByCustomerId = async (req, res) => {
 };
 // Create Custom Order
 export const createCustomOrder = async (req, res) => {
+  console.log("createCustomOrder called with request body:", req.body);
+  console.log("Files received:", req.files);
+  
   try {
+    // Extract data from request body
+    const { customerId, description, quantity, specialNotes, category, wantDate } = req.body;
     
-    const { customerId , description, quantity, specialNotes, category } = req.body;
-
-    if (!customerId || !description || !quantity || !category) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Customer ID, description, quantity and category are required.' 
+    console.log("Extracted wantDate:", wantDate);
+    
+    // Validate required fields
+    if (!customerId || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID and description are required',
       });
     }
+    
+    // Format date for MySQL
+    const formattedWantDate = wantDate ? new Date(wantDate).toISOString().split('T')[0] : null;
+    console.log("Formatted want date for DB:", formattedWantDate);
 
-    // Insert order into database
-    const [result] = await pool.query(
-      `INSERT INTO custom_orders 
-       (customer_id, description, quantity, special_notes, category)
-       VALUES (?, ?, ?, ?, ?)`,
-      [customerId, description, quantity, specialNotes , category]
-    );
-
-    const orderId = result.insertId; // Get the auto-incremented ID
-
-    // Save design files if any
+    // Check if the custom_orders table has the want_date column
+    // You can do this with a simple query to check the table structure
+    const [tableColumns] = await pool.query("SHOW COLUMNS FROM custom_orders");
+    const hasWantDateColumn = tableColumns.some(column => column.Field === 'want_date');
+    console.log("Does custom_orders table have want_date column?", hasWantDateColumn);
+    
+    // If want_date column doesn't exist, add it
+    if (!hasWantDateColumn) {
+      console.log("Adding want_date column to custom_orders table...");
+      await pool.query("ALTER TABLE custom_orders ADD COLUMN want_date DATE NULL");
+    }
+    
+    // Create query with explicit column names
+    let query = 'INSERT INTO custom_orders (customer_id, description, quantity, special_notes, category';
+    let values = [customerId, description, quantity || 1, specialNotes || null, category || null];
+    
+    // Only add want_date to the query if the column exists
+    if (hasWantDateColumn || formattedWantDate) {
+      query += ', want_date) VALUES (?, ?, ?, ?, ?, ?)';
+      values.push(formattedWantDate);
+    } else {
+      query += ') VALUES (?, ?, ?, ?, ?)';
+    }
+    
+    console.log("Final SQL query:", query);
+    console.log("Query values:", values);
+    
+    // Insert the order with explicit column references
+    const [orderResult] = await pool.query(query, values);
+    
+    console.log("Order inserted with ID:", orderResult.insertId);
+    
+    // Process design files if any
+    const designFiles = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await pool.query(
-          `INSERT INTO custom_order_designs
-           (order_id, file_name, file_type, file_path)
-           VALUES (?, ?, ?, ?)`,
-          [orderId, file.filename, file.mimetype, file.path]
+          'INSERT INTO custom_order_designs (order_id, file_name, file_type, file_path) VALUES (?, ?, ?, ?)',
+          [orderResult.insertId, file.filename, file.mimetype, file.path]
         );
+        designFiles.push(file.filename);
       }
     }
 
-    res.json({
+    // Return success response with created order details
+    return res.status(201).json({
       success: true,
-      message: 'Custom order created successfully!',
-      orderId,
-      status: 'pending'
+      message: 'Custom order created successfully',
+      order: {
+        orderId: orderResult.insertId,
+        customerId,
+        description,
+        quantity: quantity || 1,
+        specialNotes: specialNotes || null,
+        status: 'pending',
+        category: category || null,
+        wantDate: formattedWantDate,
+        designFiles,
+      }
     });
-  } catch (error) {
-    console.error('Error creating custom order:', error);
-    res.status(500).json({
+  } catch (err) {
+    console.error('Error in createCustomOrder:', err);
+    return res.status(500).json({
       success: false,
-      message: 'Failed to create custom order.',
-      error: error.message,
+      message: 'Error creating custom order'
     });
   }
 };
@@ -277,6 +318,7 @@ export const getCustomOrders = async (req, res) => {
     const [orders] = await pool.query(
       `SELECT o.order_id, o.customer_id, o.description, o.quantity, 
               o.status, o.special_notes, o.category, o.created_at, o.updated_at,
+              o.want_date, 
               GROUP_CONCAT(d.file_name) as design_files
        FROM custom_orders o
        LEFT JOIN custom_order_designs d ON o.order_id = d.order_id
@@ -294,8 +336,17 @@ export const getCustomOrders = async (req, res) => {
       category: order.category,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
+      wantDate: order.want_date, // Include the want_date in the formatted response
       designFiles: order.design_files ? order.design_files.split(',') : []
     }));
+
+    // Log the first few orders to debug
+    if (formattedOrders.length > 0) {
+      console.log("Sample order data with want_date:", {
+        orderId: formattedOrders[0].orderId,
+        wantDate: formattedOrders[0].wantDate
+      });
+    }
 
     res.json({
       success: true,

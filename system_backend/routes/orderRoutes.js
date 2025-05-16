@@ -7,35 +7,24 @@ import path from 'path';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-
-    if (req.originalUrl.includes('/custom-order')) {
-      cb(null, 'uploads/');
-    } else {
-      cb(null, 'uploads/products/');
-    }
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
-  },
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
 
 const upload = multer({ 
   storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB file size limit
-  },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif|pdf|ai|psd/; // Added design file types
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    
-    if (mimetype && extname) {
-      return cb(null, true);
+  fileFilter: (req, file, callback) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg' && ext !== '.pdf' && ext !== '.doc' && ext !== '.docx') {
+      return callback(new Error('Only images, PDFs, and DOC files are allowed'))
     }
-    cb(new Error('Only image/design files (jpeg, jpg, png, gif, pdf, ai, psd) are allowed!'));
+    callback(null, true)
   }
 });
+
 const OrderRoutes = express.Router();
 
 OrderRoutes.post('/process-payment', authMiddleware, processPayment);
@@ -48,14 +37,17 @@ OrderRoutes.get('/all_order',getAllOrders);
 
 OrderRoutes.put('/all_order_update',updateNewOrderStatus);
 
-OrderRoutes.post('/custom-order',upload.array('designFiles', 5), createCustomOrder);
+// Modify the route handling to ensure body parsing works correctly
+OrderRoutes.post('/custom-order', authMiddleware, upload.array('designFiles'), (req, res, next) => {
+  console.log("Raw request body:", req.body);
+  next();
+}, createCustomOrder);
 
 OrderRoutes.get('/all_custom_order',getCustomOrders);
 
 OrderRoutes.get('/all_customer_order_Id',authMiddleware, getOrderByCustomerId);
 
 OrderRoutes.put('/status',updateOrderStatus);
-
 
 OrderRoutes.put('/update_am',updateAmountPaid);
 

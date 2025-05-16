@@ -15,6 +15,12 @@ const Quotations = () => {
   const [designFiles, setDesignFiles] = useState([]);
   const [customerId, setCustomerId] = useState(null);
   const [category, setCategory] = useState('');
+  const [wantDate, setWantDate] = useState(''); // New state for want date
+  
+  // Get tomorrow's date for the minimum date in the date picker
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
 
   const categoryOptions = ['Medals', 'Badges', 'Mugs', 'Other']
 
@@ -66,14 +72,17 @@ const Quotations = () => {
   };
 
   const handleCreateOrder = async () => {
-    if (!description || !customerId || !category) {
-      setError('Description is required and you must be logged in');
+    if (!description || !customerId || !category || !wantDate) {
+      setError('Description, category and want date are required and you must be logged in');
       return;
     }
 
     setLoading(true);
     setError(null);
 
+    // Debug logging to verify wantDate is included
+    console.log("Want date before sending:", wantDate);
+    
     const token = localStorage.getItem('token');
     const formData = new FormData();
 
@@ -82,6 +91,13 @@ const Quotations = () => {
     formData.append('quantity', quantity);
     formData.append('specialNotes', specialNotes);
     formData.append('category', category);
+    formData.append('wantDate', wantDate); // Ensure this line is included
+    
+    // For debugging, check all FormData entries
+    console.log("FormData entries:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
 
     designFiles.forEach(file => {
       formData.append('designFiles', file);
@@ -160,6 +176,21 @@ const Quotations = () => {
             />
           </Form.Group>
 
+          {/* New Want Date Field */}
+          <Form.Group controlId="wantDate" className="mb-3">
+            <Form.Label>Required By Date *</Form.Label>
+            <Form.Control
+              type="date"
+              value={wantDate}
+              onChange={(e) => setWantDate(e.target.value)}
+              min={minDate}
+              required
+            />
+            <Form.Text muted>
+              Please select the date you need this order completed by
+            </Form.Text>
+          </Form.Group>
+
           <Form.Group controlId="specialNotes" className="mb-3">
             <Form.Label>Special Notes</Form.Label>
             <Form.Control
@@ -211,6 +242,7 @@ const Quotations = () => {
               <th>Category</th>
               <th>Description</th>
               <th>Quantity</th>
+              <th>Required By</th>
               <th>Status</th>
               <th>Created At</th>
               <th>Design Files</th>
@@ -223,6 +255,7 @@ const Quotations = () => {
                 <td>{order.category || 'Not specified'}</td>
                 <td>{order.description || 'No description'}</td>
                 <td>{order.quantity || 0}</td>
+                <td>{order.wantDate ? new Date(order.wantDate).toLocaleDateString() : 'Not specified'}</td>
                 <td>{order.status || 'Pending'}</td>
                 <td>{order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}</td>
                 <td>
