@@ -1,4 +1,4 @@
-import { addPayment, createInvoice, createQuotation, getAllInvoicesAdmin, getAllJobs, getAllQuotationsForAdmin, getInvoicesByUserId, getInvoicesByUserId2, getJobsByCustomerId, getQuotations, updateJob, updateQuotationStatus } from '../controllers/addquotationController.js';
+import { addPayment, createInvoice, createQuotation, getAllInvoicesAdmin, getAllJobs, getAllQuotationsForAdmin, getInvoicesByUserId, getInvoicesByUserId2, getJobsByCustomerId, getQuotations, updateApprovalStatus, updateJob, updateQuotationStatus } from '../controllers/addquotationController.js';
 
 import authMiddleware from '../middleware/auth.js';
 import express from 'express';
@@ -20,5 +20,6 @@ quotationRouter.post('/get_invoice2',getInvoicesByUserId2);
 quotationRouter.get('/get_all_jobs',getAllJobs);
 quotationRouter.put('/update_job',updateJob);
 quotationRouter.post('/get_job',authMiddleware,getJobsByCustomerId)
+quotationRouter.post('/update_approval_status', updateApprovalStatus);
 
 export default quotationRouter;

@@ -21,6 +21,7 @@ const UserInvoices = () => {
     cvv: '',
     cardName: ''
   });
+  const [approvalLoading, setApprovalLoading] = useState(false);
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -207,6 +208,68 @@ const UserInvoices = () => {
     doc.save(`Invoice_${invoice.invoice_id}.pdf`);
   };
 
+  const handleApproveInvoice = async (invoiceId) => {
+    try {
+      setApprovalLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:4000/api/quotation/update_approval_status',
+        {
+          invoiceId,
+          status: 'approved'
+        },
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        // Update the invoice in the local state
+        setInvoices(invoices.map(invoice => 
+          invoice.invoice_id === invoiceId 
+            ? { ...invoice, customer_approval_status: 'approved' } 
+            : invoice
+        ));
+      } else {
+        setError('Failed to approve invoice');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error approving invoice');
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  const handleCancelInvoice = async (invoiceId) => {
+    try {
+      setApprovalLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:4000/api/quotation/update_approval_status',
+        {
+          invoiceId,
+          status: 'cancelled'
+        },
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        // Update the invoice in the local state
+        setInvoices(invoices.map(invoice => 
+          invoice.invoice_id === invoiceId 
+            ? { ...invoice, customer_approval_status: 'cancelled' } 
+            : invoice
+        ));
+      } else {
+        setError('Failed to cancel invoice');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error cancelling invoice');
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
   if (loading) return <Spinner animation="border" variant="primary" className="d-block mx-auto mt-5" />;
   if (error) return <Alert variant="danger" className="mt-3">{error}</Alert>;
 
@@ -248,9 +311,19 @@ const UserInvoices = () => {
               <p><strong>Total Amount:</strong> LKR {invoice.total_amount}(With Services Charges)</p>
               <p><strong>Paid Amount:</strong> LKR {invoice.paid_amount}</p>
               <p><strong>Payment Status:</strong> {invoice.payment_status}</p>
+              {invoice.customer_approval_status && (
+                <p><strong>Approval Status:</strong> 
+                  <span className={`ms-2 badge bg-${
+                    invoice.customer_approval_status === 'approved' ? 'success' : 
+                    invoice.customer_approval_status === 'cancelled' ? 'danger' : 'warning'
+                  }`}>
+                    {invoice.customer_approval_status.toUpperCase()}
+                  </span>
+                </p>
+              )}
               <hr />
               <p className="text-center">Thank you for your purchase!</p>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap">
                 <Button variant="primary" size="sm" className="mt-2 flex-grow-1" onClick={() => downloadInvoice(invoice)}>
                   Download Invoice
                 </Button>
@@ -263,6 +336,28 @@ const UserInvoices = () => {
                   >
                     Make Payment
                   </Button>
+                )}
+                {(!invoice.customer_approval_status || invoice.customer_approval_status === 'pending') && (
+                  <>
+                    <Button 
+                      variant="outline-success" 
+                      size="sm" 
+                      className="mt-2 flex-grow-1" 
+                      onClick={() => handleApproveInvoice(invoice.invoice_id)}
+                      disabled={approvalLoading}
+                    >
+                      {approvalLoading ? 'Processing...' : 'Approve Order'}
+                    </Button>
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm" 
+                      className="mt-2 flex-grow-1" 
+                      onClick={() => handleCancelInvoice(invoice.invoice_id)}
+                      disabled={approvalLoading}
+                    >
+                      {approvalLoading ? 'Processing...' : 'Cancel Order'}
+                    </Button>
+                  </>
                 )}
               </div>
             </Card.Body>
