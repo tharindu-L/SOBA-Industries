@@ -30,8 +30,11 @@ const Quotations = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      setError('You must be logged in to place custom orders');
-      navigate('/login'); // Redirect to login if no token
+      //setError('You must be logged in to place custom orders');
+      //localStorage.setItem('needsLogin', 'true');
+      // Instead of redirecting to /login, set a flag and redirect to home
+      localStorage.setItem('needsLogin', 'true');
+      navigate('/'); // Redirect to home where the login modal can be shown
       return;
     }
 
@@ -46,7 +49,8 @@ const Quotations = () => {
       console.error('Error decoding token:', err);
       setError('Authentication error. Please login again.');
       localStorage.removeItem('token'); // Remove invalid token
-      navigate('/login');
+      localStorage.setItem('needsLogin', 'true');
+      navigate('/');
     }
   }, [navigate]);
 
@@ -98,7 +102,8 @@ const Quotations = () => {
     if (!token) {
       setError('No authentication token found. Please log in again.');
       setLoading(false);
-      navigate('/login');
+      localStorage.setItem('needsLogin', 'true');
+      navigate('/');
       return;
     }
 

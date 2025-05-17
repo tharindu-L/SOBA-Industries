@@ -16,6 +16,15 @@ const OrdersComponent = () => {
     const fetchOrders = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          // Set the flag and redirect to home
+          localStorage.setItem('needsLogin', 'true');
+          // Store the current path to redirect back after login
+          localStorage.setItem('redirectAfterLogin', '/orders');
+          navigate('/');
+          return;
+        }
+        
         const response = await axios.get('http://localhost:4000/api/order/order', {
           headers: {
             token
@@ -30,7 +39,7 @@ const OrdersComponent = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [navigate]);
 
   if (loading) return <div className="loading">Loading orders...</div>;
   if (error) return <div className="error">Error: {error}</div>;

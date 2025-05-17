@@ -25,6 +25,13 @@ const CustomNavbar = ({ isHomePage }) => {
     if (token) {
       setIsAuthenticated(true);
     }
+    
+    // Check if we need to show the login modal
+    const needsLogin = localStorage.getItem('needsLogin');
+    if (needsLogin === 'true') {
+      setShowModal(true);
+      localStorage.removeItem('needsLogin'); // Clear the flag after using it
+    }
   }, []);
 
   // Handle scroll event and update navbar background color
@@ -78,7 +85,15 @@ const CustomNavbar = ({ isHomePage }) => {
         localStorage.setItem('token', response.data.token);
         setIsAuthenticated(true);
         closeModal();
-        window.location.reload(); // Refresh the page after login
+        
+        // Check if there was a redirect path stored
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          localStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else {
+          window.location.reload(); // Only reload if no specific redirect
+        }
       } else {
         alert(response.data.message);
       }

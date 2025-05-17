@@ -94,7 +94,7 @@ const Footprints = () => {
               fontSize: "1.2rem",
               transition: "transform 0.3s ease, box-shadow 0.3s ease",
             }}
-            onClick={() => navigate("/dashboard/quotations")}
+            onClick={() => navigate("/dashboard/create-new-Custom-Order")}
           >
             ✂️ Custom Order Now
           </button>

@@ -83,8 +83,9 @@ const ShopItems = () => {
   const addToCart = (product) => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Please login to add items to cart');
-      navigate('/login');
+      localStorage.setItem('needsLogin', 'true');
+      localStorage.setItem('redirectAfterLogin', '/');
+      navigate('/');
       return;
     }
 

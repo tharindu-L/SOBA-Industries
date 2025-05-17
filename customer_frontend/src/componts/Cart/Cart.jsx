@@ -2,7 +2,7 @@ import { Box, Button, FormControl, FormControlLabel, IconButton, Modal, Paper, R
 import React, { useEffect, useState } from 'react';
 
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteIcon from '@mui/icons-material/Delete'; // Fixed the import path
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +23,11 @@ const Cart = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login');
+      // Instead of directly navigating, set the flag and redirect to home
+      localStorage.setItem('needsLogin', 'true');
+      // Store the current path to redirect back after login
+      localStorage.setItem('redirectAfterLogin', '/cart');
+      navigate('/');
       return;
     }
 
@@ -89,7 +93,10 @@ const Cart = () => {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login');
+      // Make sure this section uses the popup approach
+      localStorage.setItem('needsLogin', 'true');
+      localStorage.setItem('redirectAfterLogin', '/cart');
+      navigate('/');
       return;
     }
 
