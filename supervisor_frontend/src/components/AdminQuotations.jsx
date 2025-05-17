@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table } from 'react-bootstrap';
+import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table, Tooltip, OverlayTrigger } from 'react-bootstrap';
 import { CheckCircle, Clock, FileEarmarkCheck, Plus, Search, Trash, XCircle } from 'react-bootstrap-icons';
 import React, { useEffect, useState } from 'react';
 
@@ -21,6 +21,13 @@ const styles = {
   },
   cardBody: {
     padding: '0.75rem' // Reduce card body padding
+  },
+  descriptionCell: {
+    maxWidth: '150px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    cursor: 'help'
   }
 };
 
@@ -649,6 +656,30 @@ const AdminQuotations = () => {
     fetchInvoicesForOrders();
   };
 
+  // Add this helper function to render descriptions
+  const renderDescription = (description) => {
+    if (!description) return 'Not specified';
+    
+    if (description.length <= 30) {
+      return description;
+    }
+    
+    return (
+      <OverlayTrigger
+        placement="right"
+        overlay={
+          <Tooltip id={`tooltip-description-${Math.random()}`} style={{maxWidth: '400px'}}>
+            <div style={{whiteSpace: 'normal', textAlign: 'left'}}>{description}</div>
+          </Tooltip>
+        }
+      >
+        <div style={styles.descriptionCell}>
+          {description}
+        </div>
+      </OverlayTrigger>
+    );
+  };
+
   return (
     <Container fluid className="py-4" style={styles.pageContainer} >
       <Card className="shadow-sm">
@@ -740,7 +771,6 @@ const AdminQuotations = () => {
                         <span className="ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </th>
-                    <th>Special Notes</th>
                     <th>Design Files</th>
                     <th onClick={() => handleSort('createdAt')} className="cursor-pointer">
                       Created At
@@ -765,7 +795,7 @@ const AdminQuotations = () => {
                         <td>{order.orderId}</td>
                         <td>{order.customerId}</td>
                         <td>{order.category || 'Not specified'}</td>
-                        <td>{order.description}</td>
+                        <td>{renderDescription(order.description)}</td>
                         <td>{order.quantity}</td>
                         <td>
                           {order.wantDate ? (
@@ -780,17 +810,6 @@ const AdminQuotations = () => {
                               )}
                             </span>
                           ) : 'Not specified'}
-                        </td>
-                        <td>
-                          {order.specialNotes ? (
-                            order.specialNotes.length > 20 
-                              ? (
-                                <span title={order.specialNotes}>
-                                  {order.specialNotes.substring(0, 20)}...
-                                </span>
-                              ) 
-                              : order.specialNotes
-                          ) : '-'}
                         </td>
                         <td>
                           {order.designFiles && order.designFiles.length > 0 ? (
@@ -829,7 +848,7 @@ const AdminQuotations = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="12" className="text-center py-4"> {/* Update colspan to match new column count */}
+                      <td colSpan="11" className="text-center py-4"> {/* Update colspan to match new column count */}
                         {searchTerm 
                           ? "No orders match your search criteria" 
                           : "No orders available"}
