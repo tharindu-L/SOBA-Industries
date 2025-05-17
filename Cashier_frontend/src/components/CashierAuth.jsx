@@ -4,12 +4,9 @@ import { useNavigate } from 'react-router-dom';
 
 const CashierAuth = () => {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: '',
-    tel_num: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,20 +78,6 @@ const CashierAuth = () => {
     border: '1px solid #fca5a5'
   };
 
-  const toggleStyle = {
-    textAlign: 'center',
-    marginTop: '1.5rem',
-    color: '#64748b'
-  };
-
-  const linkStyle = {
-    color: '#6366f1',
-    fontWeight: '600',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer'
-  };
-
   const spinnerStyle = {
     display: 'inline-block',
     width: '1.5rem',
@@ -109,12 +92,7 @@ const CashierAuth = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validateForm = () => {
-    if (!isLogin && !formData.name) {
-      setError('Name is required');
-      return false;
-    }
-    
+  const validateForm = () => {    
     if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(formData.email)) {
       setError('Invalid email format');
       return false;
@@ -122,11 +100,6 @@ const CashierAuth = () => {
     
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters');
-      return false;
-    }
-    
-    if (!isLogin && !/^\d{10}$/.test(formData.tel_num)) {
-      setError('Invalid phone number (10 digits required)');
       return false;
     }
     
@@ -141,12 +114,12 @@ const CashierAuth = () => {
     setError('');
 
     try {
-      const endpoint = isLogin ? 'login' : 'register';
-      const url = `http://localhost:4000/api/user/cashier/${endpoint}`;
+      const url = `http://localhost:4000/api/user/cashier/login`;
 
-      const payload = isLogin 
-        ? { email: formData.email, password: formData.password }
-        : formData;
+      const payload = { 
+        email: formData.email, 
+        password: formData.password 
+      };
 
       const response = await fetch(url, {
         method: 'POST',
@@ -172,36 +145,12 @@ const CashierAuth = () => {
     <div style={containerStyle}>
       <div style={formContainerStyle}>
         <div style={headerStyle}>
-          <h1 style={titleStyle}>Cashier {isLogin ? 'Login' : 'Register'}</h1>
+          <h1 style={titleStyle}>Cashier Login</h1>
         </div>
 
         {error && <div style={errorStyle}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {!isLogin && (
-            <>
-              <input
-                type="text"
-                name="name"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={handleChange}
-                style={inputStyle}
-                required
-              />
-              <input
-                type="tel"
-                name="tel_num"
-                placeholder="Phone Number"
-                value={formData.tel_num}
-                onChange={handleChange}
-                style={inputStyle}
-                pattern="[0-9]{10}"
-                required
-              />
-            </>
-          )}
-
           <input
             type="email"
             name="email"
@@ -236,24 +185,10 @@ const CashierAuth = () => {
             {loading ? (
               <div style={spinnerStyle} />
             ) : (
-              isLogin ? 'Login' : 'Register'
+              'Login'
             )}
           </button>
         </form>
-
-        <div style={toggleStyle}>
-          <p>
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              onClick={() => setIsLogin(!isLogin)}
-              style={linkStyle}
-              onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
-              onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
-            >
-              {isLogin ? 'Register' : 'Login'}
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );
