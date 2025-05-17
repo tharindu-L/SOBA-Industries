@@ -511,6 +511,13 @@ const AdminQuotations = () => {
         : new Date(b.createdAt) - new Date(a.createdAt);
     }
 
+    // Special handling for orderId (as numbers, not strings)
+    if (sortField === 'orderId') {
+      const idA = parseInt(a.orderId) || 0;
+      const idB = parseInt(b.orderId) || 0;
+      return sortDirection === 'asc' ? idA - idB : idB - idA;
+    }
+
     // Handle regular fields
     if (!a[sortField]) return sortDirection === 'asc' ? 1 : -1;
     if (!b[sortField]) return sortDirection === 'asc' ? -1 : 1;
