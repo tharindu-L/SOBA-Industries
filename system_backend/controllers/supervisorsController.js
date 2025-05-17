@@ -5,7 +5,7 @@ import validator from 'validator';
 
 // Register Supervisor
 const registerSupervisor = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, tel_num } = req.body;
   try {
     // Validation checks
     if (!validator.isEmail(email)) {
@@ -14,15 +14,20 @@ const registerSupervisor = async (req, res) => {
     if (password.length < 8) {
       return res.json({ success: false, message: 'Please enter a strong password (at least 8 characters)' });
     }
+    if (!tel_num || tel_num.length !== 10) {
+      return res.json({ success: false, message: 'Please enter a valid phone number' });
+    }
 
     // Create the supervisors table if it doesn't exist
     const CREATE_TABLE_QUERY = `
       CREATE TABLE IF NOT EXISTS supervisors (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
+        SupervisorID INT AUTO_INCREMENT PRIMARY KEY,
+        supervisor_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        tel_num VARCHAR(15),
+        profile_image VARCHAR(255),
+        join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
     
@@ -40,9 +45,9 @@ const registerSupervisor = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert supervisor into the database - using 'name' column instead of 'username'
-    const INSERT_SUPERVISOR_QUERY = 'INSERT INTO supervisors (name, email, password) VALUES (?, ?, ?)';
-    const [result] = await pool.query(INSERT_SUPERVISOR_QUERY, [username, email, hashedPassword]);
+    // Insert supervisor into the database - using 'supervisor_name' column instead of 'name'
+    const INSERT_SUPERVISOR_QUERY = 'INSERT INTO supervisors (supervisor_name, email, password, tel_num) VALUES (?, ?, ?, ?)';
+    const [result] = await pool.query(INSERT_SUPERVISOR_QUERY, [username, email, hashedPassword, tel_num]);
 
     // Generate token for the newly registered supervisor
     const token = createToken(result.insertId);
@@ -72,7 +77,7 @@ const loginSupervisor = async (req, res) => {
       return res.json({ success: false, message: 'Invalid email or password' });
     }
 
-    const token = createToken(supervisor.id);
+    const token = createToken(supervisor.SupervisorID);
 
     res.json({ success: true, token });
   } catch (error) {
