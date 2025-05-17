@@ -28,11 +28,7 @@ const Sidebar = () => {
             </Link>
           </Nav.Item>
           
-          <Nav.Item>
-            <Link to="/invoices" className="nav-link text-white">
-              <i className="fas fa-file-invoice-dollar me-2"></i> Invoices
-            </Link>
-          </Nav.Item>
+          {/* Invoices tab removed */}
           
           <Nav.Item>
             <Link to="/bills" className="nav-link text-white">

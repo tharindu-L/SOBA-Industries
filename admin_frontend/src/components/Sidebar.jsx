@@ -106,6 +106,7 @@ const Sidebar = () => {
       icon: <ReceiptIcon />,
       path: '/bills'
     },
+    // Removed the invoices tab
   ];
 
   return (
