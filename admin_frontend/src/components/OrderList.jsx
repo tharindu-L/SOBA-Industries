@@ -187,7 +187,7 @@ const OrderList = () => {
   }
 
   return (
-    <Container style={{marginTop:'-700px'}} maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
       <Paper 
         elevation={0} 
         sx={{ 

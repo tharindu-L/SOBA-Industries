@@ -263,7 +263,7 @@ const InvoiceList = () => {
   }
 
   return (
-    <Container style={{marginTop:'-700px'}} maxWidth="lg">
+    <Container maxWidth="lg">
       <Box mt={4} mb={4}>
         <Typography variant="h4" component="h1" gutterBottom>
           Invoice Management
