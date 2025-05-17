@@ -1,8 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Protest+Revolution&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Dancing+Script:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 
 .header-carousel {
   position: relative;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .carousel-image-container {
@@ -15,6 +18,18 @@
   height: 100%;
   object-fit: cover;
   width: 100%;
+  transform: scale(1.05);
+  transition: transform 15s ease;
+  animation: zoomEffect 15s infinite alternate;
+}
+
+@keyframes zoomEffect {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
 }
 
 .dark-overlay {
@@ -23,7 +38,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.7));
   z-index: 1;
 }
 
@@ -33,51 +48,131 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(3px);
-  padding: 2rem;
-  border-radius: 12px;
+  backdrop-filter: blur(5px);
+  padding: 3rem;
+  border-radius: 20px;
   text-align: center;
   max-width: 80%;
   width: 90%;
   z-index: 2;
   box-sizing: border-box;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: fadeIn 1.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .carousel-caption h2 {
-  font-family: 'Protest Revolution', sans-serif;
-  font-size: 4rem;
-  font-weight: bold;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 4.5rem;
+  font-weight: 800;
   color: #fff;
   margin: 0;
   line-height: 1.2;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+  animation: slideUp 1s ease 0.5s both;
 }
 
 .carousel-caption .logo {
-  max-width: 150px;
-  margin-bottom: 1.5rem;
+  max-width: 170px;
+  margin-bottom: 2rem;
+  filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.4));
+  transition: transform 0.3s ease;
+  animation: bounceIn 1s ease;
+}
+
+.carousel-caption .logo:hover {
+  transform: scale(1.05);
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .carousel-caption p {
-  font-size: 1.5rem;
-  margin-top: 1rem;
-  font-weight: 500;
-  font-family: "Cormorant Garamond", serif;
+  font-size: 1.8rem;
+  margin-top: 1.5rem;
+  font-weight: 400;
+  font-family: 'Montserrat', serif;
   color: #fff;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+  opacity: 0.9;
+  animation: slideUp 1s ease 0.8s both;
 }
 
 /* Responsive styles */
 @media (max-width: 1200px) {
   .carousel-caption h2 {
-    font-size: 3.5rem;
+    font-size: 4rem;
   }
 }
 
 @media (max-width: 992px) {
+  .carousel-caption {
+    padding: 2.5rem;
+  }
+  
   .carousel-caption h2 {
-    font-size: 3rem;
+    font-size: 3.5rem;
+  }
+  
+  .carousel-caption p {
+    font-size: 1.5rem;
+  }
+  
+  .carousel-caption .logo {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .carousel-image-container {
+    height: 80vh;
+  }
+  
+  .carousel-caption {
+    padding: 2rem;
+    width: 90%;
+  }
+  
+  .carousel-caption h2 {
+    font-size: 2.8rem;
+    white-space: normal;
   }
   
   .carousel-caption p {
@@ -85,56 +180,32 @@
   }
   
   .carousel-caption .logo {
-    max-width: 130px;
+    max-width: 120px;
+    margin-bottom: 1.5rem;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 576px) {
   .carousel-image-container {
     height: 70vh;
   }
   
   .carousel-caption {
     padding: 1.5rem;
-    width: 90%;
+    width: 95%;
   }
   
   .carousel-caption h2 {
-    font-size: 2.5rem;
-    white-space: normal;
+    font-size: 2.2rem;
   }
   
   .carousel-caption p {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    margin-top: 1rem;
   }
   
   .carousel-caption .logo {
     max-width: 100px;
     margin-bottom: 1rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .carousel-image-container {
-    height: 60vh;
-  }
-  
-  .carousel-caption {
-    padding: 1rem;
-    width: 95%;
-  }
-  
-  .carousel-caption h2 {
-    font-size: 2rem;
-  }
-  
-  .carousel-caption p {
-    font-size: 1rem;
-    margin-top: 0.5rem;
-  }
-  
-  .carousel-caption .logo {
-    max-width: 80px;
-    margin-bottom: 0.5rem;
   }
 }

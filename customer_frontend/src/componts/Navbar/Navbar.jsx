@@ -137,7 +137,7 @@ const CustomNavbar = ({ isHomePage }) => {
         bg={scrolling ? 'dark' : isHomePage ? 'transparent' : 'dark'}
         variant="dark"
         expand="lg"
-        className="custom-navbar fixed-top"
+        className={`custom-navbar fixed-top ${scrolling ? 'scrolled' : ''}`}
       >
         <Container fluid>
           <Navbar.Brand as={Link} to="/">
@@ -146,6 +146,7 @@ const CustomNavbar = ({ isHomePage }) => {
               width="120"
               height="40"
               alt="Logo"
+              className="brand-logo"
             />
           </Navbar.Brand>
 
@@ -166,7 +167,7 @@ const CustomNavbar = ({ isHomePage }) => {
             {isAuthenticated && (
               <div className="image-container">
                 <img
-                  className="btn-e-magazine-ms-lg-3"
+                  className="profile-image"
                   src={assest.td}
                   alt="Profile"
                   onMouseEnter={() => setIsDropdownOpen(true)}
@@ -178,9 +179,6 @@ const CustomNavbar = ({ isHomePage }) => {
                   </div>
                   <div className="dropdown-item" onClick={() => navigate('/dashboard/quotations')}>
                     My Dashboard
-                  </div>
-                   <div className="dropdown-item" onClick={() => navigate('/orders')}>
-                    My Orders
                   </div>
                   <div className="dropdown-item" onClick={handleLogout}>
                     Logout
@@ -202,18 +200,18 @@ const CustomNavbar = ({ isHomePage }) => {
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
             {!isLogin && (
-              <Form.Group controlId="formName">
+              <Form.Group className="mb-3" controlId="formName">
                 <Form.Control type="text" name="name" placeholder="Enter your name" required />
               </Form.Group>
             )}
-            <Form.Group controlId="formEmail">
+            <Form.Group className="mb-3" controlId="formEmail">
               <Form.Control type="email" name="email" placeholder="Enter your email" required />
             </Form.Group>
-            <Form.Group controlId="formPassword">
+            <Form.Group className="mb-3" controlId="formPassword">
               <Form.Control type="password" name="password" placeholder="Enter your password" required />
             </Form.Group>
             {!isLogin && (
-              <Form.Group controlId="formTelNum">
+              <Form.Group className="mb-3" controlId="formTelNum">
                 <Form.Control type="tel" name="tel_num" placeholder="Enter your phone number" required />
               </Form.Group>
             )}
