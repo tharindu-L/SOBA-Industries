@@ -1,8 +1,38 @@
-import { Alert, Button, Card, Col, Container, Row, Spinner } from 'react-bootstrap';
-import React, { useEffect, useState } from 'react';
-
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { RefreshRounded } from '@mui/icons-material';
+import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
+
+// Before implementing the charts, you need to install these packages:
+// npm install chart.js react-chartjs-2
+
+// Import chart components
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title, 
+  Tooltip, 
+  Legend 
+} from 'chart.js';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title, 
+  Tooltip, 
+  Legend
+);
 
 const Dashboard = () => {
   const [orderStats, setOrderStats] = useState({
@@ -26,6 +56,8 @@ const Dashboard = () => {
       }
       
       const response = await axios.get('http://localhost:4000/api/order/order-stats');
+      // Add console.log to check if API is responding with data
+      console.log("API response:", response.data);
       setOrderStats(response.data);
       setLastUpdated(new Date());
       setError(null);
@@ -46,6 +78,79 @@ const Dashboard = () => {
   // Handle manual refresh
   const handleRefresh = () => {
     fetchOrderStatistics(true);
+  };
+
+  // Prepare chart data
+  const barChartData = {
+    labels: ['Total', 'Completed', 'Pending', 'Cancelled', 'Approved'],
+    datasets: [
+      {
+        label: 'Order Statistics',
+        data: [
+          orderStats.total,
+          orderStats.completed,
+          orderStats.pending,
+          orderStats.cancelled,
+          orderStats.approved
+        ],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(153, 102, 255, 0.6)'
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(153, 102, 255, 1)'
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const doughnutChartData = {
+    labels: ['Completed', 'Pending', 'Cancelled', 'Approved'],
+    datasets: [
+      {
+        data: [
+          orderStats.completed,
+          orderStats.pending,
+          orderStats.cancelled,
+          orderStats.approved
+        ],
+        backgroundColor: [
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(153, 102, 255, 0.6)'
+        ],
+        borderColor: [
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(153, 102, 255, 1)'
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Order Statistics',
+      },
+    },
   };
 
   if (loading && !refreshing) {
@@ -164,6 +269,41 @@ const Dashboard = () => {
                   className="progress-bar bg-primary" 
                   role="progressbar" 
                   style={{ width: `${orderStats.total ? (orderStats.approved / orderStats.total) * 100 : 0}%` }}
+                />
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Charts Section */}
+      <Row className="mb-4">
+        <Col lg={8}>
+          <Card className="shadow-sm border-0">
+            <Card.Body>
+              <h4 className="mb-4">Order Statistics</h4>
+              <div style={{ height: '300px' }}>
+                <Bar data={barChartData} options={chartOptions} />
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Body>
+              <h4 className="mb-4">Order Distribution</h4>
+              <div style={{ height: '300px' }} className="d-flex align-items-center justify-content-center">
+                <Doughnut 
+                  data={doughnutChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom'
+                      }
+                    }
+                  }} 
                 />
               </div>
             </Card.Body>
@@ -303,5 +443,6 @@ const Dashboard = () => {
     </Container>
   );
 };
+
 
 export default Dashboard;

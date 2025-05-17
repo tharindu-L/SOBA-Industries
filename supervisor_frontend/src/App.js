@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import AddMaterial from './components/AddMaterial';
 import AddProduct from './components/AddProduct';
 import AdminQuotations from './components/AdminQuotations';
-import Dashboard from './components/Dashboard';
+import Dashboard from './components/Dashboard.jsx'; // Make sure it uses the .jsx extension
 import JobManagement from './components/Jobs';
 import LoginSignup from './components/loginsingup';
 import MaterialList from './components/MaterialList';
