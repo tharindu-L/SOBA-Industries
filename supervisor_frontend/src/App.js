@@ -2,7 +2,7 @@ import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation, useNavigate } from 'react-router-dom';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import AddMaterial from './components/AddMaterial';
 import AddProduct from './components/AddProduct';
@@ -18,15 +18,19 @@ import Sidebar from './components/Sidebar';
 // Protected Route Component
 const ProtectedRoute = ({ element }) => {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true to prevent flicker
   
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    
     if (!token) {
+      console.log('No token found, redirecting to login');
       navigate('/login');
+      setIsAuthenticated(false);
     }
-  }, [navigate, token]);
+  }, [navigate]);
   
-  return token ? element : null;
+  return isAuthenticated ? element : null;
 };
 
 const App = () => {

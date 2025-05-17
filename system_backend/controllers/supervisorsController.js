@@ -89,7 +89,7 @@ const loginSupervisor = async (req, res) => {
 // Get Supervisor Profile
 const getSupervisorProfile = async (req, res) => {
   try {
-    const supervisorId = req.userId; // This comes from the authMiddleware
+    const supervisorId = req.body.userId; // Changed from req.userId to req.body.userId
     
     // Fetch supervisor data from the database
     const SELECT_SUPERVISOR_QUERY = 'SELECT SupervisorID, supervisor_name, email, tel_num, profile_image, join_date FROM supervisors WHERE SupervisorID = ?';

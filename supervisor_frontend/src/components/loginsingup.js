@@ -35,30 +35,29 @@ const LoginSignup = () => {
     try {
       setErrorMessage(''); // Clear any previous errors
       
-      // For login and registration endpoints
       const url = 'http://localhost:4000/api/supervisors/login';
       
+      // Only send email and password for login
+      const loginData = {
+        email: formData.email,
+        password: formData.password
+      };
+      
       console.log('Making login request to:', url);
-      console.log('With data:', formData);
+      console.log('With data:', loginData);
       
-      // Add a direct test request to check if the server is responding at all
-      try {
-        const testResponse = await axios.get('http://localhost:4000/');
-        console.log('Server root response:', testResponse.data);
-      } catch (err) {
-        console.error('Server root test failed:', err);
-      }
-      
-      // Now try the actual login request
-      const response = await axios.post(url, formData);
+      // Use the correct data structure for login
+      const response = await axios.post(url, loginData);
       console.log('Response received:', response.data);
-  
+
       if (response.data.success) {
-        const { token } = response.data;
-        localStorage.setItem('token', token);
-        navigate('/dashboard');
+        // Store token in localStorage
+        localStorage.setItem('token', response.data.token);
+        console.log('Token stored:', response.data.token);
+        
+        // Use window.location for a complete page reload/redirect
+        window.location.href = '/dashboard';
       } else {
-        // Display specific error message from API
         setErrorMessage(response.data.message || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
