@@ -1,149 +1,135 @@
-import { AppBar, Avatar, Badge, Box, Button, Divider, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import AddIcon from '@mui/icons-material/Add';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import DescriptionIcon from '@mui/icons-material/Description';
 import HomeIcon from '@mui/icons-material/Home';
-import InfoIcon from '@mui/icons-material/Info';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import MenuIcon from '@mui/icons-material/Menu';
-import axios from 'axios';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 
 const Sidebar = () => {
-  const theme = useTheme();
-  const [image, setImage] = useState(null);
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [open, setOpen] = useState(false);
-  const [user, setUser] = useState({});
+  const [username, setUsername] = useState('Guest User');
   const navigate = useNavigate();
 
-  const toggleDrawer = () => {
-    setOpen(!open);
-  };
+  useEffect(() => {
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // If token exists, try to decode it
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        // Check if we have a customer name from token payload
+        if (decoded.name) {
+          setUsername(decoded.name);
+        } else if (decoded.customer_name) {
+          setUsername(decoded.customer_name);
+        } else if (decoded.email) {
+          // Use email if name is not available
+          setUsername(decoded.email.split('@')[0]);
+        }
+        
+        // For debugging
+        console.log("Decoded token:", decoded);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    } else {
+      // Redirect to login if no token is found
+      navigate('/login');
+    }
+  }, [navigate]);
 
-  const goToHomePage = () => {
+  const handleLogout = () => {
+    localStorage.removeItem('token');
     navigate('/');
   };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:4000/api/user/get_user', {
-          headers: {
-            token: token
-          }
-        });
-        if (response.data.success) {
-          setUser(response.data.user);
-          setImage(response.data.user.profile_image || 'https://via.placeholder.com/150');
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
   return (
-    <Box>
-      {isMobile && (
-        <AppBar position="sticky">
-          <Toolbar>
-            <IconButton color="inherit" edge="start" onClick={toggleDrawer} aria-label="menu" sx={{ mr: 2 }}>
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6">Dashboard</Typography>
-          </Toolbar>
-        </AppBar>
-      )}
-
-      <Drawer
-        sx={{
-          width: 280,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: 280,
-            boxSizing: 'border-box',
-            backgroundColor: '#1e1e2f',
-            color: 'white',
-            paddingTop: '20px'
-          }
-        }}
-        variant={isMobile ? 'temporary' : 'permanent'}
-        anchor="left"
-        open={open}
-        onClose={toggleDrawer}
-        ModalProps={{
-          keepMounted: true
-        }}
-      >
-        {/* Profile Section */}
-        <Box sx={{ textAlign: 'center', padding: '10px', marginBottom: '20px' }}>
-          <Badge
-            overlap="circular"
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            badgeContent={
-              <Box
-                sx={{
-                  width: '15px',
-                  height: '15px',
-                  backgroundColor: '#44b700',
-                  borderRadius: '50%',
-                  border: '2px solid white'
-                }}
-              />
-            }
-          >
-            <Avatar
-              src={`http://localhost:4000/images/${image}`}
-              alt="Profile"
-              sx={{ width: 100, height: 100, margin: 'auto', marginBottom: '10px' }}
-            />
-          </Badge>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-            {user.customer_name || 'Guest User'}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#ccc' }}>
-            {user.role || 'Customer'}
-          </Typography>
-        </Box>
-
-        {/* Navigation Menu */}
-        <List>
-          <ListItem button component={Link} to="/dashboard/create-new-Custom-Order" sx={{ '&:hover': { backgroundColor: '#333' } }}>
+    <Box
+      sx={{
+        width: 240,
+        height: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bgcolor: 'background.paper',
+        borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+        <AccountCircleIcon fontSize="large" sx={{ mr: 1 }} />
+        <Typography variant="h6">{username}</Typography>
+      </Box>
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/')}>
             <ListItemIcon>
-              <AddIcon sx={{ color: 'white' }} />
+              <HomeIcon />
             </ListItemIcon>
-            <ListItemText primary="Create Custom Order" />
-          </ListItem>
-          <Divider />
-          <ListItem button component={Link} to="/dashboard/invoices" sx={{ '&:hover': { backgroundColor: '#333' } }}>
+            <ListItemText primary="Home" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/profile')}>
             <ListItemIcon>
-              <ListAltIcon sx={{ color: 'white' }} />
-            </ListItemIcon>
-            <ListItemText primary="My Invoices" />
-          </ListItem>
-          <Divider />
-          
-          <Divider />
-          <ListItem button component={Link} to="/profile" sx={{ '&:hover': { backgroundColor: '#333' } }}>
-            <ListItemIcon>
-              <AccountCircleIcon sx={{ color: 'white' }} />
+              <AccountCircleIcon />
             </ListItemIcon>
             <ListItemText primary="Profile" />
-          </ListItem>
-        </List>
-
-        {/* Home Page Button */}
-        <Box sx={{ position: 'absolute', bottom: '20px', width: '80%', left: '10%', backgroundColor: 'blue', borderRadius: '10px' }}>
-          <Button variant="contained" color="primary" fullWidth onClick={goToHomePage} startIcon={<HomeIcon />}>
-            Home Page
-          </Button>
-        </Box>
-      </Drawer>
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/dashboard/create-new-Custom-Order')}>
+            <ListItemIcon>
+              <AddShoppingCartIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create Custom Order" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/dashboard/invoices')}>
+            <ListItemIcon>
+              <ReceiptIcon />
+            </ListItemIcon>
+            <ListItemText primary="Invoices" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/dashboard/bills')}>
+            <ListItemIcon>
+              <DescriptionIcon />
+            </ListItemIcon>
+            <ListItemText primary="Bills" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigate('/orders')}>
+            <ListItemIcon>
+              <AssignmentIcon />
+            </ListItemIcon>
+            <ListItemText primary="My Orders" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+      <Box sx={{ flexGrow: 1 }} />
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
+        </ListItem>
+      </List>
     </Box>
   );
 };

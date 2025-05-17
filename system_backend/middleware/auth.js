@@ -3,27 +3,27 @@
 import jwt from 'jsonwebtoken';
 
 const authMiddleware = (req, res, next) => {
+  // Get token from header
+  const token = req.header('token');
+
+  // Check if no token
+  if (!token) {
+    console.log('No authentication token provided');
+    return res.status(401).json({ error: 'No token, authorization denied' });
+  }
+
   try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
-    
-    // Check if token exists
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'No token, authorization denied' });
-    }
-    
-    // Extract the token (remove "Bearer " prefix)
-    const token = authHeader.split(' ')[1];
-    
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret');
     
-    // Add user id to request
-    req.userId = decoded.id;
+    // Add user ID from payload to request
+    req.body.userId = decoded.id;
+    console.log(`Authenticated request for user ID: ${decoded.id}`);
+    
     next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(401).json({ success: false, message: 'Token is not valid' });
+  } catch (err) {
+    console.error('Token verification failed:', err.message);
+    res.status(401).json({ error: 'Token is not valid' });
   }
 };
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
+import { useNavigate } from 'react-router-dom';
 
 const UserInvoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -22,15 +23,29 @@ const UserInvoices = () => {
     cardName: ''
   });
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
+        
+        if (!token) {
+          setError('Authentication token not found. Please login again.');
+          navigate('/login');
+          return;
+        }
+        
+        console.log("Using token:", token);
+        
         const response = await axios.get('http://localhost:4000/api/quotation/get_invoice', {
-          headers: { token },
+          headers: { 
+            token: token
+          },
         });
+        
+        console.log("API response:", response.data);
 
         if (response.data.success) {
           const categorizedInvoices = response.data.invoices.reduce((acc, invoice) => {
@@ -45,19 +60,26 @@ const UserInvoices = () => {
           }, {});
 
           setInvoices(Object.values(categorizedInvoices));
+          setError('');
         } else {
           setError('Failed to fetch invoices');
         }
       } catch (err) {
-        console.error(err);
-        setError('Error fetching invoices');
+        console.error("Fetch invoices error:", err);
+        if (err.response?.status === 401) {
+          setError('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          navigate('/login');
+        } else {
+          setError(`Error fetching invoices: ${err.message}`);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchInvoices();
-  }, [paymentSuccess]);
+  }, [paymentSuccess, navigate]);
 
   const handlePaymentClick = (invoice) => {
     setCurrentInvoice(invoice);
@@ -144,6 +166,10 @@ const UserInvoices = () => {
       }
 
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing. Please login again.');
+      }
+      
       const response = await axios.post(
         'http://localhost:4000/api/quotation/invoice_payment',
         {
@@ -212,6 +238,13 @@ const UserInvoices = () => {
     try {
       setApprovalLoading(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication token missing. Please login again.');
+        navigate('/login');
+        return;
+      }
+      
       const response = await axios.post(
         'http://localhost:4000/api/quotation/update_approval_status',
         {
@@ -243,6 +276,13 @@ const UserInvoices = () => {
     try {
       setApprovalLoading(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication token missing. Please login again.');
+        navigate('/login');
+        return;
+      }
+      
       const response = await axios.post(
         'http://localhost:4000/api/quotation/update_approval_status',
         {

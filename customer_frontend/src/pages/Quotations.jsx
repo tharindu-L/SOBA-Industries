@@ -4,6 +4,7 @@ import { Alert, Button, Form, Spinner, Table } from 'react-bootstrap';
 import React, { useEffect, useState } from 'react';
 
 import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 
 const Quotations = () => {
   const [orders, setOrders] = useState([]);
@@ -15,57 +16,70 @@ const Quotations = () => {
   const [designFiles, setDesignFiles] = useState([]);
   const [customerId, setCustomerId] = useState(null);
   const [category, setCategory] = useState('');
-  const [wantDate, setWantDate] = useState(''); // New state for want date
+  const [wantDate, setWantDate] = useState('');
+  const navigate = useNavigate();
   
   // Get tomorrow's date for the minimum date in the date picker
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split('T')[0];
 
-  const categoryOptions = ['Medals', 'Badges', 'Mugs', 'Other']
+  const categoryOptions = ['Medals', 'Badges', 'Mugs', 'Other'];
 
-  // Decode token to get customer ID
+  // Check authentication and get customer ID
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        setCustomerId(decoded.id);
-      } catch (err) {
-        console.error('Error decoding token:', err);
-      }
+    if (!token) {
+      setError('You must be logged in to place custom orders');
+      navigate('/login'); // Redirect to login if no token
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      const token = localStorage.getItem('token');
-
-      try {
-        const response = await fetch('http://localhost:4000/api/order/all_customer_order_Id', {
-          method: 'GET',
-          headers: {
-            token,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch orders');
-        }
-
-        const data = await response.json();
-        // Ensure we're setting a proper array of orders
-        setOrders(Array.isArray(data.orders) ? data.orders : []);
-      } catch (err) {
-        setError('Error fetching orders');
-        console.error(err);
-      }
-    };
-
-    if (customerId) {
-      fetchOrders();
+    try {
+      const decoded = jwtDecode(token);
+      console.log("Decoded token:", decoded);
+      setCustomerId(decoded.id);
+      
+      // Fetch orders after confirming user is authenticated
+      fetchOrders(token);
+    } catch (err) {
+      console.error('Error decoding token:', err);
+      setError('Authentication error. Please login again.');
+      localStorage.removeItem('token'); // Remove invalid token
+      navigate('/login');
     }
-  }, [customerId]);
+  }, [navigate]);
+
+  const fetchOrders = async (token) => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:4000/api/order/all_customer_order_Id', {
+        method: 'GET',
+        headers: {
+          'token': token,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (response.status === 401) {
+        throw new Error('Authentication failed');
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Orders data:", data);
+      setOrders(Array.isArray(data.orders) ? data.orders : []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError(`Error fetching orders: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileChange = (e) => {
     setDesignFiles([...e.target.files]);
@@ -73,28 +87,30 @@ const Quotations = () => {
 
   const handleCreateOrder = async () => {
     if (!description || !customerId || !category || !wantDate) {
-      setError('Description, category and want date are required and you must be logged in');
+      setError('Description, category and want date are required');
       return;
     }
 
     setLoading(true);
     setError(null);
-
-    // Debug logging to verify wantDate is included
-    console.log("Want date before sending:", wantDate);
     
     const token = localStorage.getItem('token');
-    const formData = new FormData();
+    if (!token) {
+      setError('No authentication token found. Please log in again.');
+      setLoading(false);
+      navigate('/login');
+      return;
+    }
 
+    const formData = new FormData();
     formData.append('customerId', customerId);
     formData.append('description', description);
     formData.append('quantity', quantity);
     formData.append('specialNotes', specialNotes);
     formData.append('category', category);
-    formData.append('wantDate', wantDate); // Ensure this line is included
+    formData.append('wantDate', wantDate);
     
-    // For debugging, check all FormData entries
-    console.log("FormData entries:");
+    console.log("FormData contents:");
     for (let pair of formData.entries()) {
       console.log(pair[0], pair[1]);
     }
@@ -107,7 +123,7 @@ const Quotations = () => {
       const response = await fetch('http://localhost:4000/api/order/custom-order', {
         method: 'POST',
         headers: {
-          token,
+          'token': token
         },
         body: formData,
       });
@@ -115,20 +131,27 @@ const Quotations = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Success
         setDescription('');
         setQuantity(1);
         setSpecialNotes('');
+        setCategory('');
+        setWantDate('');
         setDesignFiles([]);
-        setLoading(false);
-        // Safely add the new order to the list
-        setOrders(prevOrders => [...(Array.isArray(prevOrders) ? prevOrders : []), data.order || data]);
+        
+        // Refresh orders list after creating a new one
+        fetchOrders(token);
+        
+        alert('Custom order created successfully!');
       } else {
         setError(data.message || 'Error creating order');
+        console.error('Order creation failed:', data);
       }
     } catch (err) {
-      setError('Error creating order');
-      setLoading(false);
+      setError(`Error creating order: ${err.message}`);
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,6 +162,8 @@ const Quotations = () => {
       {/* Form for creating a new order */}
       <div className="order-form-container mb-3">
         <h3>Create New Custom Order</h3>
+        {error && <Alert variant="danger">{error}</Alert>}
+        
         <Form>
         <Form.Group className="mb-3">
           <Form.Label>Category *</Form.Label>
@@ -156,13 +181,14 @@ const Quotations = () => {
           </Form.Select>
         </Form.Group>
           <Form.Group controlId="description" className="mb-3">
-            <Form.Label>Description</Form.Label>
+            <Form.Label>Description *</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter order description"
+              required
             />
           </Form.Group>
 
@@ -176,7 +202,6 @@ const Quotations = () => {
             />
           </Form.Group>
 
-          {/* New Want Date Field */}
           <Form.Group controlId="wantDate" className="mb-3">
             <Form.Label>Required By Date *</Form.Label>
             <Form.Control
@@ -230,11 +255,10 @@ const Quotations = () => {
         </Form>
       </div>
 
-      {/* Error message */}
-      {error && <Alert variant="danger">{error}</Alert>}
-
       {/* Display list of orders in a table */}
-      {Array.isArray(orders) && orders.length > 0 ? (
+      {loading && <Spinner animation="border" variant="primary" className="d-block mx-auto mt-3" />}
+      
+      {!loading && Array.isArray(orders) && orders.length > 0 ? (
         <Table striped bordered hover responsive>
           <thead>
             <tr>
@@ -280,7 +304,7 @@ const Quotations = () => {
           </tbody>
         </Table>
       ) : (
-        <p>No orders found.</p>
+        !loading && <p>No orders found.</p>
       )}
     </div>
   );
