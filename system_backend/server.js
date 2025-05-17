@@ -23,22 +23,6 @@ import cashierRouter from './routes/cashierRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const app = express();
 const port = process.env.PORT || 4000;
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -64,6 +48,8 @@ app.use('/api/analytics',AnalyticsRouter);
 app.use('/api/bill', billRoutes);
 app.use('/api/custom-orders', CustomRouter);
 app.use('/api/cashier', cashierRouter);
+app.use('/api/supervisor', supervisorsRouter);
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {

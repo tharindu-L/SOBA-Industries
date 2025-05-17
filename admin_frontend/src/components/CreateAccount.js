@@ -8,6 +8,7 @@ const CreateAccount = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    tel_num: '',  // Add telephone number field
     role: 'cashier' // Default role
   });
 
@@ -26,7 +27,7 @@ const CreateAccount = () => {
   };
 
   const validateForm = () => {
-    if (!formData.username.trim() || !formData.email.trim() || !formData.password || !formData.role) {
+    if (!formData.username.trim() || !formData.email.trim() || !formData.password || !formData.role || !formData.tel_num) {
       setFeedback({
         message: 'All fields are required',
         type: 'danger'
@@ -52,6 +53,24 @@ const CreateAccount = () => {
       return false;
     }
 
+    // Password length check
+    if (formData.password.length < 8) {
+      setFeedback({
+        message: 'Password must be at least 8 characters long',
+        type: 'danger'
+      });
+      return false;
+    }
+
+    // Phone number validation - basic check for numeric and length
+    if (!/^\d{10}$/.test(formData.tel_num)) {
+      setFeedback({
+        message: 'Please enter a valid 10-digit phone number',
+        type: 'danger'
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -66,15 +85,25 @@ const CreateAccount = () => {
     
     try {
       // Determine endpoint based on selected role
-      const endpoint = formData.role === 'cashier' 
-        ? 'http://localhost:4000/api/cashier/register'
-        : 'http://localhost:4000/api/guides/register';
+      let endpoint = '';
+      if (formData.role === 'cashier') {
+        endpoint = 'http://localhost:4000/api/cashier/register';
+      } else if (formData.role === 'supervisor') {
+        endpoint = 'http://localhost:4000/api/supervisor/register';
+      } else {
+        throw new Error('Invalid role selected');
+      }
+      
+      console.log(`Submitting to endpoint: ${endpoint}`);
       
       const response = await axios.post(endpoint, {
         username: formData.username,
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        tel_num: formData.tel_num  // Include telephone number in the request
       });
+
+      console.log('Response received:', response.data);
 
       if (response.data.success) {
         setFeedback({
@@ -88,6 +117,7 @@ const CreateAccount = () => {
           email: '',
           password: '',
           confirmPassword: '',
+          tel_num: '',
           role: 'cashier'
         });
       } else {
@@ -99,7 +129,7 @@ const CreateAccount = () => {
     } catch (error) {
       console.error('Error creating account:', error);
       setFeedback({
-        message: error.response?.data?.message || 'An error occurred while creating the account',
+        message: error.response?.data?.message || 'Server error during registration',
         type: 'danger'
       });
     } finally {
@@ -179,6 +209,9 @@ const CreateAccount = () => {
                         placeholder="Enter password"
                         required
                       />
+                      <Form.Text className="text-muted">
+                        Password must be at least 8 characters long.
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                   
@@ -193,6 +226,23 @@ const CreateAccount = () => {
                         placeholder="Confirm password"
                         required
                       />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>Phone Number</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        name="tel_num"
+                        value={formData.tel_num}
+                        onChange={handleChange}
+                        placeholder="Enter 10-digit phone number"
+                        required
+                      />
+                      <Form.Text className="text-muted">
+                        Phone number must be 10 digits.
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
