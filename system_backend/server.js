@@ -17,7 +17,8 @@ import pool from './config/db.js';
 import quotationRouter from './routes/addquotation.js';
 import reportRouter from './routes/reportRouter.js';
 import supervisorsRouter from './routes/supervisorsRouter.js';
-import userRouter from './routes/userRouter.js';
+import userRouter from './routes/UserRouter.js';
+import cashierRouter from './routes/cashierRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +63,7 @@ app.use('/api/order',OrderRoutes);
 app.use('/api/analytics',AnalyticsRouter);
 app.use('/api/bill', billRoutes);
 app.use('/api/custom-orders', CustomRouter);
+app.use('/api/cashier', cashierRouter);
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {
