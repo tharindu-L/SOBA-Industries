@@ -63,7 +63,7 @@ const Sidebar = () => {
         flexDirection: 'column',
       }}
     >
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', bgcolor:'blue' }}>
         <AccountCircleIcon fontSize="large" sx={{ mr: 1 }} />
         <Typography variant="h6">{username}</Typography>
       </Box>
@@ -98,7 +98,7 @@ const Sidebar = () => {
             <ListItemIcon>
               <ReceiptIcon />
             </ListItemIcon>
-            <ListItemText primary="Invoices" />
+            <ListItemText primary="Custom Orders" />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
@@ -114,7 +114,7 @@ const Sidebar = () => {
             <ListItemIcon>
               <AssignmentIcon />
             </ListItemIcon>
-            <ListItemText primary="My Orders" />
+            <ListItemText primary="Standard Orders" />
           </ListItemButton>
         </ListItem>
       </List>

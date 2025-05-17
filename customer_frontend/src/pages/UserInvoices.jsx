@@ -364,7 +364,7 @@ const UserInvoices = () => {
               <hr />
               <p className="text-center">Thank you for your purchase!</p>
               <div className="d-flex gap-2 flex-wrap">
-                <Button variant="primary" size="sm" className="mt-2 flex-grow-1" onClick={() => downloadInvoice(invoice)}>
+                <Button variant="primary" size="sm" className="mt-2 flex-grow-1 " style={{ color: 'white' }} onClick={() => downloadInvoice(invoice)}>
                   Download Invoice
                 </Button>
                 {invoice.payment_status !== 'Completed' && (
@@ -372,6 +372,7 @@ const UserInvoices = () => {
                     variant="success" 
                     size="sm" 
                     className="mt-2 flex-grow-1" 
+                    style={{ color: 'white' }}
                     onClick={() => handlePaymentClick(invoice)}
                   >
                     Make Payment
