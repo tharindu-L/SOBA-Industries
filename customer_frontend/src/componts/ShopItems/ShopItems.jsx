@@ -123,8 +123,10 @@ const ShopItems = () => {
   const addToCart = (product) => {
     const token = localStorage.getItem('token');
     if (!token) {
+      // Show alert before redirecting
+      alert("Please login or signup first to add items to cart.");
       localStorage.setItem('needsLogin', 'true');
-      //localStorage.setItem('redirectAfterLogin', '/');
+      localStorage.setItem('redirectAfterLogin', '/cart');
       navigate('/');
       return;
     }
@@ -135,6 +137,7 @@ const ShopItems = () => {
     } catch (err) {
       console.error('Error decoding token:', err);
       localStorage.removeItem('token'); // Remove invalid token
+      alert("Your session has expired. Please login again.");
       localStorage.setItem('needsLogin', 'true');
       navigate('/');
       return;
