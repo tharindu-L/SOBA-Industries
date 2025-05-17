@@ -86,4 +86,25 @@ const loginSupervisor = async (req, res) => {
   }
 };
 
-export { registerSupervisor, loginSupervisor };
+// Get Supervisor Profile
+const getSupervisorProfile = async (req, res) => {
+  try {
+    const supervisorId = req.userId; // This comes from the authMiddleware
+    
+    // Fetch supervisor data from the database
+    const SELECT_SUPERVISOR_QUERY = 'SELECT SupervisorID, supervisor_name, email, tel_num, profile_image, join_date FROM supervisors WHERE SupervisorID = ?';
+    const [rows] = await pool.query(SELECT_SUPERVISOR_QUERY, [supervisorId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Supervisor not found' });
+    }
+
+    // Return supervisor data (excluding the password)
+    res.json({ success: true, ...rows[0] });
+  } catch (error) {
+    console.error('Error fetching supervisor profile:', error);
+    res.status(500).json({ success: false, message: 'Server error during profile fetch' });
+  }
+};
+
+export { registerSupervisor, loginSupervisor, getSupervisorProfile };

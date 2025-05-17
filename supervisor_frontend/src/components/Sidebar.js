@@ -36,7 +36,7 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));  
   const [open, setOpen] = useState(false);  
   const navigate = useNavigate();  
-  const location = useLocation(); // Add this to get current location
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -44,28 +44,44 @@ const Sidebar = () => {
     setOpen(!open);
   };
 
-  // Logout function removed
+  // Add logout function
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
 
   useEffect(() => {
     const fetchUsername = async () => {
       const token = localStorage.getItem('token'); 
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      
       try {
-        const response = await axios.get('http://localhost:4000/api/guides/get_guide', {
+        // Update endpoint to match the URL path in server.js
+        const response = await axios.get('http://localhost:4000/api/supervisors/profile', {
           headers: {
-            token: token
+            Authorization: `Bearer ${token}`
           }
         });
-        // Access the supervisor_name within the user object
-        setUsername(response.data.user.supervisor_name); 
+        
+        console.log('Profile response:', response.data);
+        setUsername(response.data.supervisor_name || response.data.username || 'Production Manager'); 
         setLoading(false);
       } catch (error) {
         console.error('Error fetching username:', error);
         setLoading(false);
+        // If unauthorized, redirect to login
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
       }
     };
   
     fetchUsername();
-  }, []);
+  }, [navigate]);
   
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
@@ -146,7 +162,7 @@ const Sidebar = () => {
           </Typography>
           
           <Chip 
-            label={loading ? "Loading..." : "Production Manager"} 
+            label={loading ? "Loading..." : username} 
             variant="outlined" 
             size="small"
             sx={{ 
@@ -219,7 +235,30 @@ const Sidebar = () => {
           </List>
         </Box>
 
-        {/* Sign out button removed */}
+        {/* Add Sign out button */}
+        <Box sx={{ mt: 'auto', mb: 2, mx: 2 }}>
+          <ListItem 
+            button 
+            onClick={handleLogout}
+            sx={{
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              },
+              borderRadius: '4px',
+            }}
+          >
+            <ListItemIcon sx={{ color: 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
+              <ExitToAppIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Sign Out" 
+              primaryTypographyProps={{
+                fontWeight: '500',
+              }}
+            />
+          </ListItem>
+        </Box>
       </Drawer>
 
       <Box sx={{ marginLeft: isMobile ? 0 : 280, transition: 'margin 0.3s' }}>

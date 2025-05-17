@@ -7,14 +7,13 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const LoginSignup = () => {
-  const [token, setToken] = useState(null);
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and signup
+  // Change this to always be login (remove toggle functionality)
+  const [isLogin, setIsLogin] = useState(true); // Now we'll keep this true and not change it
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     tel_num: '',
-    nic: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
@@ -27,30 +26,56 @@ const LoginSignup = () => {
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     if (savedToken) {
-      setToken(savedToken);
-      navigate('/add-tour'); // Redirect to a secure page if token exists
+      navigate('/dashboard'); // Redirect to dashboard if token exists
     }
   }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = isLogin
-        ? 'http://localhost:4000/api/guides/login'
-        : 'http://localhost:4000/api/guides/register';
+      setErrorMessage(''); // Clear any previous errors
+      
+      // For login and registration endpoints
+      const url = 'http://localhost:4000/api/supervisors/login';
+      
+      console.log('Making login request to:', url);
+      console.log('With data:', formData);
+      
+      // Add a direct test request to check if the server is responding at all
+      try {
+        const testResponse = await axios.get('http://localhost:4000/');
+        console.log('Server root response:', testResponse.data);
+      } catch (err) {
+        console.error('Server root test failed:', err);
+      }
+      
+      // Now try the actual login request
       const response = await axios.post(url, formData);
-
+      console.log('Response received:', response.data);
+  
       if (response.data.success) {
         const { token } = response.data;
-        localStorage.setItem('token', token); // Save token in localStorage
-        setToken(token); // Update state
-        navigate('/add-tour'); // Redirect to secure page
+        localStorage.setItem('token', token);
+        navigate('/dashboard');
       } else {
-        setErrorMessage(response.data.message);
+        // Display specific error message from API
+        setErrorMessage(response.data.message || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
-      console.error('Error:', error);
-      setErrorMessage('An error occurred. Please try again.');
+      console.error('Error details:', error);
+      
+      // More detailed error handling
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        setErrorMessage(error.response.data.message || `Server error: ${error.response.status}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        setErrorMessage('No response from server. Please check your connection.');
+      } else {
+        console.error('Error message:', error.message);
+        setErrorMessage(`Error: ${error.message}`);
+      }
     }
   };
 
@@ -58,7 +83,7 @@ const LoginSignup = () => {
     <div className="login-signup-wrapper">
       <div className="login-signup-card">
         <div className="card-header text-center">
-          <h4>{isLogin ? 'Guide Login' : 'Guide Signup'}</h4>
+          <h4>Production Manager Login</h4>
         </div>
         <div className="card-body">
           {errorMessage && (
@@ -67,34 +92,6 @@ const LoginSignup = () => {
             </div>
           )}
           <form onSubmit={handleSubmit}>
-            {!isLogin && (
-              <div className="mb-3">
-                <label htmlFor="name" className="form-label">Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required={!isLogin}
-                />
-              </div>
-            )}
-            {!isLogin && (
-              <div className="mb-3">
-                <label htmlFor="nic" className="form-label">National ID</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="nic"
-                  name="nic"
-                  value={formData.nic}
-                  onChange={handleChange}
-                  required={!isLogin}
-                />
-              </div>
-            )}
             <div className="mb-3">
               <label htmlFor="email" className="form-label">Email</label>
               <input
@@ -119,32 +116,10 @@ const LoginSignup = () => {
                 required
               />
             </div>
-            {!isLogin && (
-              <div className="mb-3">
-                <label htmlFor="tel_num" className="form-label">Phone Number</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="tel_num"
-                  name="tel_num"
-                  value={formData.tel_num}
-                  onChange={handleChange}
-                  required={!isLogin}
-                />
-              </div>
-            )}
             <button type="submit" className="btn btn-primary w-100">
-              {isLogin ? 'Login' : 'Signup'}
+              Login
             </button>
           </form>
-          <div className="text-center mt-3">
-            <button
-              className="btn btn-link"
-              onClick={() => setIsLogin(!isLogin)}
-            >
-              {isLogin ? "Don't have an account? Signup" : 'Already have an account? Login'}
-            </button>
-          </div>
         </div>
       </div>
     </div>
