@@ -4,7 +4,8 @@ import {
   loginSupervisor, 
   getSupervisorProfile, 
   getLowStockMaterials,
-  useMaterials
+  useMaterials,
+  getLowStockProducts
 } from '../controllers/supervisorsController.js';
 import authMiddleware from '../middleware/auth.js';
 
@@ -24,5 +25,6 @@ supervisorsRouter.get('/profile', authMiddleware, getSupervisorProfile);
 // Material management routes
 supervisorsRouter.get('/low-stock-materials', authMiddleware, getLowStockMaterials);
 supervisorsRouter.post('/use-materials', authMiddleware, useMaterials);
+supervisorsRouter.get('/low-stock-products', authMiddleware, getLowStockProducts);
 
 export default supervisorsRouter;

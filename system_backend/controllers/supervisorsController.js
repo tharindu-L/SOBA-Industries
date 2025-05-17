@@ -127,6 +127,31 @@ const getLowStockMaterials = async (req, res) => {
   }
 };
 
+// Get low stock products
+const getLowStockProducts = async (req, res) => {
+  try {
+    console.log('Supervisor controller: Getting low stock products');
+    
+    // Use COALESCE to handle NULL preorder_level values
+    const [products] = await pool.query(
+      'SELECT * FROM products WHERE stock <= COALESCE(preorder_level, 10)'
+    );
+    
+    console.log(`Found ${products.length} low stock products`);
+    
+    res.json({ 
+      success: true, 
+      lowStockProducts: products 
+    });
+  } catch (error) {
+    console.error('Error fetching low stock products:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching low stock products' 
+    });
+  }
+};
+
 // Update material quantities when used in production
 const useMaterials = async (req, res) => {
   const { materials } = req.body;
@@ -205,4 +230,11 @@ const useMaterials = async (req, res) => {
   }
 };
 
-export { registerSupervisor, loginSupervisor, getSupervisorProfile, getLowStockMaterials, useMaterials };
+export { 
+  registerSupervisor, 
+  loginSupervisor, 
+  getSupervisorProfile, 
+  getLowStockMaterials, 
+  useMaterials,
+  getLowStockProducts 
+};

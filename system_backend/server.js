@@ -70,6 +70,21 @@ app.get('/api/material/low-stock', async (req, res) => {
   }
 });
 
+// Add endpoint to get low stock products - Fix the query to handle NULL preorder_level
+app.get('/api/product/low-stock', async (req, res) => {
+  try {
+    console.log('Fetching low stock products...');
+    const [products] = await pool.query(
+      'SELECT * FROM products WHERE stock <= COALESCE(preorder_level, 10)'
+    );
+    console.log(`Found ${products.length} low stock products:`, products);
+    res.json({ success: true, lowStockProducts: products });
+  } catch (error) {
+    console.error('Error fetching low stock products:', error);
+    res.status(500).json({ success: false, message: 'Error fetching low stock products' });
+  }
+});
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {

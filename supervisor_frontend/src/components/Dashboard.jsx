@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { RefreshRounded, Notifications, Close } from '@mui/icons-material';
-import { Container, Row, Col, Card, Button, Alert, Spinner, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Tabs, Tab } from 'react-bootstrap';
 
 // Import chart components
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -47,6 +47,8 @@ const Dashboard = () => {
   // New state for low stock notifications
   const [lowStockMaterials, setLowStockMaterials] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [activeNotificationTab, setActiveNotificationTab] = useState('materials');
 
   const fetchOrderStatistics = async (isRefreshing = false) => {
     try {
@@ -85,14 +87,66 @@ const Dashboard = () => {
     }
   };
 
+  // New function to fetch low stock products with debugging
+  const fetchLowStockProducts = async () => {
+    try {
+      console.log('Dashboard: Fetching low stock products...');
+      const response = await axios.get('http://localhost:4000/api/product/low-stock');
+      console.log('Dashboard: Low stock products API response:', response.data);
+      
+      // If response has lowStockProducts and it's an array, use it
+      if (response.data && Array.isArray(response.data.lowStockProducts)) {
+        setLowStockProducts(response.data.lowStockProducts);
+      } else {
+        // Otherwise fetch all products and filter them manually
+        console.log('Dashboard: Falling back to manual filtering of products');
+        const allProductsResponse = await axios.get('http://localhost:4000/api/product/get');
+        if (allProductsResponse.data && Array.isArray(allProductsResponse.data.products)) {
+          const products = allProductsResponse.data.products;
+          // Filter products manually
+          const lowStock = products.filter(product => {
+            const stock = parseInt(product.stock || 0);
+            const preorderLevel = parseInt(product.preorder_level || 10);
+            const isLowStock = stock <= preorderLevel;
+            console.log(`Product ${product.name}: stock=${stock}, preorderLevel=${preorderLevel}, isLowStock=${isLowStock}`);
+            return isLowStock;
+          });
+          console.log('Dashboard: Manually filtered low stock products:', lowStock);
+          setLowStockProducts(lowStock);
+        } else {
+          console.error('Unable to fetch or filter products');
+          setLowStockProducts([]);
+        }
+      }
+    } catch (err) {
+      console.error('Error in fetchLowStockProducts:', err);
+      // Try fallback method if main method fails
+      try {
+        const allProductsResponse = await axios.get('http://localhost:4000/api/product/get');
+        if (allProductsResponse.data && Array.isArray(allProductsResponse.data.products)) {
+          const products = allProductsResponse.data.products;
+          const lowStock = products.filter(product => 
+            parseInt(product.stock || 0) <= parseInt(product.preorder_level || 10)
+          );
+          setLowStockProducts(lowStock);
+        }
+      } catch (fallbackErr) {
+        console.error('Error in fallback product fetch:', fallbackErr);
+        setLowStockProducts([]);
+      }
+    }
+  };
+
   // Initial data load
   useEffect(() => {
     fetchOrderStatistics();
     fetchLowStockMaterials();
+    fetchLowStockProducts();
     
     // Set up auto-refresh every 5 minutes (300000ms)
     const intervalId = setInterval(() => {
       fetchLowStockMaterials();
+      fetchLowStockProducts();
     }, 300000);
     
     return () => clearInterval(intervalId); // Clean up the interval on component unmount
@@ -102,12 +156,16 @@ const Dashboard = () => {
   const handleRefresh = () => {
     fetchOrderStatistics(true);
     fetchLowStockMaterials();
+    fetchLowStockProducts();
   };
 
   // Toggle notifications panel
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
   };
+
+  // Get total notification count
+  const totalNotifications = lowStockMaterials.length + lowStockProducts.length;
 
   // Prepare chart data
   const barChartData = {
@@ -212,12 +270,12 @@ const Dashboard = () => {
               onClick={toggleNotifications}
             >
               <Notifications />
-              {lowStockMaterials.length > 0 && (
+              {totalNotifications > 0 && (
                 <Badge 
                   bg="danger" 
                   className="notification-badge position-absolute"
                 >
-                  {lowStockMaterials.length}
+                  {totalNotifications}
                 </Badge>
               )}
             </Button>
@@ -231,37 +289,100 @@ const Dashboard = () => {
                     <Close />
                   </Button>
                 </Card.Header>
-                <Card.Body className="p-0">
-                  {lowStockMaterials.length === 0 ? (
-                    <Alert variant="success" className="m-3">All materials are in stock!</Alert>
-                  ) : (
-                    <ul className="notification-list">
-                      {lowStockMaterials.map(material => (
-                        <li key={material.itemId} className="notification-item">
-                          <div className="d-flex align-items-center">
-                            <div className="notification-icon warning">
-                              <WarningIconSVG />
-                            </div>
-                            <div className="notification-content">
-                              <h6 className="mb-0">{material.itemName} is low on stock!</h6>
-                              <p className="mb-0 text-muted small">
-                                Current quantity: {material.availableQty} (Preorder level: {material.preorder_level || 10})
-                              </p>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card.Body>
+                <Tabs
+                  activeKey={activeNotificationTab}
+                  onSelect={(k) => setActiveNotificationTab(k)}
+                  className="mb-0 notification-tabs"
+                >
+                  <Tab 
+                    eventKey="materials" 
+                    title={
+                      <span>
+                        Materials 
+                        {lowStockMaterials.length > 0 && (
+                          <Badge bg="danger" pill className="ms-1">
+                            {lowStockMaterials.length}
+                          </Badge>
+                        )}
+                      </span>
+                    }
+                  >
+                    <Card.Body className="p-0">
+                      {lowStockMaterials.length === 0 ? (
+                        <Alert variant="success" className="m-3">All materials are in stock!</Alert>
+                      ) : (
+                        <ul className="notification-list">
+                          {lowStockMaterials.map(material => (
+                            <li key={material.itemId} className="notification-item">
+                              <div className="d-flex align-items-center">
+                                <div className="notification-icon warning">
+                                  <WarningIconSVG />
+                                </div>
+                                <div className="notification-content">
+                                  <h6 className="mb-0">{material.itemName} is low on stock!</h6>
+                                  <p className="mb-0 text-muted small">
+                                    Current quantity: {material.availableQty} (Preorder level: {material.preorder_level || 10})
+                                  </p>
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </Card.Body>
+                  </Tab>
+                  <Tab 
+                    eventKey="products" 
+                    title={
+                      <span>
+                        Products 
+                        {lowStockProducts.length > 0 && (
+                          <Badge bg="danger" pill className="ms-1">
+                            {lowStockProducts.length}
+                          </Badge>
+                        )}
+                      </span>
+                    }
+                  >
+                    <Card.Body className="p-0">
+                      {lowStockProducts.length === 0 ? (
+                        <Alert variant="success" className="m-3">All products are in stock!</Alert>
+                      ) : (
+                        <ul className="notification-list">
+                          {lowStockProducts.map(product => (
+                            <li key={product.productId} className="notification-item">
+                              <div className="d-flex align-items-center">
+                                <div className="notification-icon warning">
+                                  <WarningIconSVG />
+                                </div>
+                                <div className="notification-content">
+                                  <h6 className="mb-0">{product.name} is low on stock!</h6>
+                                  <p className="mb-0 text-muted small">
+                                    Current stock: {product.stock} (Preorder level: {product.preorder_level || 10})
+                                  </p>
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </Card.Body>
+                  </Tab>
+                </Tabs>
                 <Card.Footer className="bg-white">
                   <Button 
                     variant="outline-primary" 
                     size="sm"
                     className="w-100"
-                    onClick={() => window.location.href = '/list-material'}
+                    onClick={() => {
+                      if (activeNotificationTab === 'materials') {
+                        window.location.href = '/list-material';
+                      } else {
+                        window.location.href = '/products';
+                      }
+                    }}
                   >
-                    View All Materials
+                    {activeNotificationTab === 'materials' ? 'View All Materials' : 'View All Products'}
                   </Button>
                 </Card.Footer>
               </Card>
@@ -300,9 +421,26 @@ const Dashboard = () => {
           <div className="d-flex justify-content-end">
             <Button 
               variant="outline-warning" 
-              onClick={() => window.location.href = '/materials'}
+              onClick={() => window.location.href = '/list-material'}
             >
               View Materials
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {/* Products Low Stock Alert */}
+      {lowStockProducts.length > 0 && (
+        <Alert variant="warning" className="mb-4">
+          <Alert.Heading>Low Stock Products</Alert.Heading>
+          <p>You have {lowStockProducts.length} products that are below the preorder level.</p>
+          <hr />
+          <div className="d-flex justify-content-end">
+            <Button 
+              variant="outline-warning" 
+              onClick={() => window.location.href = '/products'}
+            >
+              View Products
             </Button>
           </div>
         </Alert>
@@ -628,6 +766,24 @@ const Dashboard = () => {
           .notification-content {
             flex-grow: 1;
           }
+
+          .notification-tabs {
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+          }
+          
+          .notification-tabs .nav-link {
+            border: none;
+            padding: 10px 15px;
+            color: #495057;
+            font-size: 0.9rem;
+            font-weight: 500;
+          }
+          
+          .notification-tabs .nav-link.active {
+            border-bottom: 2px solid #0d6efd;
+            background-color: transparent;
+            color: #0d6efd;
+          }
         `}
       </style>
     </Container>
@@ -641,4 +797,5 @@ const WarningIconSVG = () => (
   </svg>
 );
 
-export default Dashboard;
+export default Dashboard; 
+
