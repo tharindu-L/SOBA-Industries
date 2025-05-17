@@ -1,9 +1,8 @@
 import pool from "../config/db.js";
 
 export const processPayment = async (req, res) => {
-
     const customerId = req.body.userId
-    const { items, paymentMethod } = req.body;
+    const { items, paymentMethod, materialUsage } = req.body; // Add materialUsage parameter
     const connection = await pool.getConnection();
 
     try {
@@ -88,6 +87,16 @@ export const processPayment = async (req, res) => {
                 'UPDATE products SET stock = stock - ? WHERE product_id = ?',
                 [item.quantity, item.productId]
             );
+        }
+
+        // 7. Update material quantities if materialUsage is provided
+        if (materialUsage && Array.isArray(materialUsage) && materialUsage.length > 0) {
+            for (const material of materialUsage) {
+                await connection.query(
+                    'UPDATE materials SET availableQty = availableQty - ? WHERE itemId = ?',
+                    [material.quantity, material.itemId]
+                );
+            }
         }
 
         await connection.commit();

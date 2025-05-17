@@ -57,6 +57,19 @@ app.get('/api/supervisors/test', (req, res) => {
   res.json({ success: true, message: 'Supervisors API is working!' });
 });
 
+// Add endpoint to get low stock materials
+app.get('/api/material/low-stock', async (req, res) => {
+  try {
+    const [materials] = await pool.query(
+      'SELECT * FROM materials WHERE availableQty <= preorder_level'
+    );
+    res.json({ success: true, lowStockMaterials: materials });
+  } catch (error) {
+    console.error('Error fetching low stock materials:', error);
+    res.status(500).json({ success: false, message: 'Error fetching low stock materials' });
+  }
+});
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {

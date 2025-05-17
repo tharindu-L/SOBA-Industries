@@ -1,5 +1,11 @@
 import express from 'express';
-import { registerSupervisor, loginSupervisor, getSupervisorProfile } from '../controllers/supervisorsController.js';
+import { 
+  registerSupervisor, 
+  loginSupervisor, 
+  getSupervisorProfile, 
+  getLowStockMaterials,
+  useMaterials
+} from '../controllers/supervisorsController.js';
 import authMiddleware from '../middleware/auth.js';
 
 const supervisorsRouter = express.Router();
@@ -14,5 +20,9 @@ supervisorsRouter.use((req, res, next) => {
 supervisorsRouter.post('/register', registerSupervisor);
 supervisorsRouter.post('/login', loginSupervisor);
 supervisorsRouter.get('/profile', authMiddleware, getSupervisorProfile);
+
+// Material management routes
+supervisorsRouter.get('/low-stock-materials', authMiddleware, getLowStockMaterials);
+supervisorsRouter.post('/use-materials', authMiddleware, useMaterials);
 
 export default supervisorsRouter;

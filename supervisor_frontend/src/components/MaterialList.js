@@ -18,13 +18,15 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
+  Chip
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import WarningIcon from '@mui/icons-material/Warning';
 import axios from 'axios';
 
 const MaterialList = () => {
@@ -36,6 +38,7 @@ const MaterialList = () => {
   const [currentMaterial, setCurrentMaterial] = useState(null);
   const [newQuantity, setNewQuantity] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [newPreorderLevel, setNewPreorderLevel] = useState('');
 
   // Fetch materials data from backend
   useEffect(() => {
@@ -47,7 +50,12 @@ const MaterialList = () => {
     axios
       .get('http://localhost:4000/api/material/get')
       .then((response) => {
-        setMaterials(response.data.materials);
+        // Make sure each material has a preorder_level, default to 10 if not set
+        const materialsWithPreorderLevel = response.data.materials.map(material => ({
+          ...material,
+          preorder_level: material.preorder_level || 10
+        }));
+        setMaterials(materialsWithPreorderLevel);
         setLoading(false);
       })
       .catch((err) => {
@@ -79,6 +87,7 @@ const MaterialList = () => {
     setCurrentMaterial(material);
     setNewQuantity(material.availableQty);
     setNewPrice(material.unitPrice);
+    setNewPreorderLevel(material.preorder_level || 10);
     setShowUpdateModal(true);
   };
 
@@ -90,12 +99,18 @@ const MaterialList = () => {
           itemId: currentMaterial.itemId,
           availableQty: newQuantity,
           unitPrice: newPrice,
+          preorder_level: newPreorderLevel
         })
         .then(() => {
           setMaterials((prevMaterials) =>
             prevMaterials.map((material) =>
               material.itemId === currentMaterial.itemId
-                ? { ...material, availableQty: newQuantity, unitPrice: newPrice }
+                ? { 
+                    ...material, 
+                    availableQty: newQuantity, 
+                    unitPrice: newPrice,
+                    preorder_level: newPreorderLevel
+                  }
                 : material
             )
           );
@@ -110,6 +125,10 @@ const MaterialList = () => {
 
   const handleCloseModal = () => {
     setShowUpdateModal(false);
+  };
+
+  const isLowStock = (material) => {
+    return parseInt(material.availableQty) <= parseInt(material.preorder_level || 10);
   };
 
   return (
@@ -162,14 +181,16 @@ const MaterialList = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Item ID</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Item Name</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Quantity</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Preorder Level</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Price</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {materials.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                       <Typography variant="body1">No materials found</Typography>
                     </TableCell>
                   </TableRow>
@@ -177,7 +198,10 @@ const MaterialList = () => {
                   materials.map((material) => (
                     <TableRow 
                       key={material.itemId}
-                      sx={{ '&:hover': { backgroundColor: 'rgba(63, 81, 181, 0.05)' } }}
+                      sx={{ 
+                        '&:hover': { backgroundColor: 'rgba(63, 81, 181, 0.05)' },
+                        backgroundColor: isLowStock(material) ? 'rgba(255, 235, 238, 0.5)' : 'inherit'
+                      }}
                     >
                       <TableCell>
                         {material.images && material.images.length > 0 ? (
@@ -216,7 +240,26 @@ const MaterialList = () => {
                       <TableCell>{material.itemId}</TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{material.itemName}</TableCell>
                       <TableCell>{material.availableQty}</TableCell>
+                      <TableCell>{material.preorder_level || 10}</TableCell>
                       <TableCell>${parseFloat(material.unitPrice).toFixed(2)}</TableCell>
+                      <TableCell>
+                        {isLowStock(material) ? (
+                          <Chip 
+                            icon={<WarningIcon />} 
+                            label="Low Stock" 
+                            color="error" 
+                            size="small" 
+                            variant="outlined" 
+                          />
+                        ) : (
+                          <Chip 
+                            label="In Stock" 
+                            color="success" 
+                            size="small" 
+                            variant="outlined" 
+                          />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
@@ -297,6 +340,19 @@ const MaterialList = () => {
                 fullWidth
                 value={newQuantity}
                 onChange={(e) => setNewQuantity(e.target.value)}
+                variant="outlined"
+                margin="normal"
+                InputProps={{
+                  sx: { borderRadius: '10px' }
+                }}
+                sx={{ mb: 3 }}
+              />
+              <TextField
+                label="Preorder Level"
+                type="number"
+                fullWidth
+                value={newPreorderLevel}
+                onChange={(e) => setNewPreorderLevel(e.target.value)}
                 variant="outlined"
                 margin="normal"
                 InputProps={{

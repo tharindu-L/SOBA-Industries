@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { RefreshRounded } from '@mui/icons-material';
-import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
-
-// Before implementing the charts, you need to install these packages:
-// npm install chart.js react-chartjs-2
+import { RefreshRounded, Notifications, Close } from '@mui/icons-material';
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 
 // Import chart components
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -46,6 +43,10 @@ const Dashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  
+  // New state for low stock notifications
+  const [lowStockMaterials, setLowStockMaterials] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const fetchOrderStatistics = async (isRefreshing = false) => {
     try {
@@ -56,7 +57,6 @@ const Dashboard = () => {
       }
       
       const response = await axios.get('http://localhost:4000/api/order/order-stats');
-      // Add console.log to check if API is responding with data
       console.log("API response:", response.data);
       setOrderStats(response.data);
       setLastUpdated(new Date());
@@ -70,14 +70,43 @@ const Dashboard = () => {
     }
   };
 
+  // New function to fetch low stock materials
+  const fetchLowStockMaterials = async () => {
+    try {
+      const response = await axios.get('http://localhost:4000/api/material/get');
+      // Filter materials that are below preorder level
+      const lowStock = response.data.materials.filter(
+        material => parseInt(material.availableQty) <= parseInt(material.preorder_level || 10)
+      );
+      setLowStockMaterials(lowStock);
+      console.log("Low stock materials:", lowStock);
+    } catch (err) {
+      console.error('Error fetching low stock materials:', err);
+    }
+  };
+
   // Initial data load
   useEffect(() => {
     fetchOrderStatistics();
+    fetchLowStockMaterials();
+    
+    // Set up auto-refresh every 5 minutes (300000ms)
+    const intervalId = setInterval(() => {
+      fetchLowStockMaterials();
+    }, 300000);
+    
+    return () => clearInterval(intervalId); // Clean up the interval on component unmount
   }, []);
 
   // Handle manual refresh
   const handleRefresh = () => {
     fetchOrderStatistics(true);
+    fetchLowStockMaterials();
+  };
+
+  // Toggle notifications panel
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
   };
 
   // Prepare chart data
@@ -174,27 +203,110 @@ const Dashboard = () => {
             </p>
           )}
         </div>
-        <Button 
-          variant="gradient-primary" 
-          onClick={handleRefresh} 
-          disabled={refreshing}
-          className="refresh-button d-flex align-items-center"
-        >
-          {refreshing ? (
-            <>
-              <Spinner as="span" size="sm" animation="border" role="status" aria-hidden="true" className="me-1" />
-              Refreshing...
-            </>
-          ) : (
-            <>
-              <RefreshRounded fontSize="small" className="me-1" />
-              Refresh
-            </>
-          )}
-        </Button>
+        <div className="d-flex align-items-center">
+          {/* Notifications button with badge */}
+          <div className="position-relative me-3">
+            <Button 
+              variant={showNotifications ? "primary" : "outline-primary"}
+              className="notification-btn"
+              onClick={toggleNotifications}
+            >
+              <Notifications />
+              {lowStockMaterials.length > 0 && (
+                <Badge 
+                  bg="danger" 
+                  className="notification-badge position-absolute"
+                >
+                  {lowStockMaterials.length}
+                </Badge>
+              )}
+            </Button>
+            
+            {/* Notification Panel */}
+            {showNotifications && (
+              <Card className="notification-panel shadow">
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">Notifications</h5>
+                  <Button variant="link" className="p-0" onClick={() => setShowNotifications(false)}>
+                    <Close />
+                  </Button>
+                </Card.Header>
+                <Card.Body className="p-0">
+                  {lowStockMaterials.length === 0 ? (
+                    <Alert variant="success" className="m-3">All materials are in stock!</Alert>
+                  ) : (
+                    <ul className="notification-list">
+                      {lowStockMaterials.map(material => (
+                        <li key={material.itemId} className="notification-item">
+                          <div className="d-flex align-items-center">
+                            <div className="notification-icon warning">
+                              <WarningIconSVG />
+                            </div>
+                            <div className="notification-content">
+                              <h6 className="mb-0">{material.itemName} is low on stock!</h6>
+                              <p className="mb-0 text-muted small">
+                                Current quantity: {material.availableQty} (Preorder level: {material.preorder_level || 10})
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card.Body>
+                <Card.Footer className="bg-white">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm"
+                    className="w-100"
+                    onClick={() => window.location.href = '/list-material'}
+                  >
+                    View All Materials
+                  </Button>
+                </Card.Footer>
+              </Card>
+            )}
+          </div>
+          
+          <Button 
+            variant="gradient-primary" 
+            onClick={handleRefresh} 
+            disabled={refreshing}
+            className="refresh-button d-flex align-items-center"
+          >
+            {refreshing ? (
+              <>
+                <Spinner as="span" size="sm" animation="border" role="status" aria-hidden="true" className="me-1" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshRounded fontSize="small" className="me-1" />
+                Refresh
+              </>
+            )}
+          </Button>
+        </div>
       </div>
       
       {error && <Alert variant="danger">{error}</Alert>}
+
+      {/* Materials Low Stock Alert */}
+      {lowStockMaterials.length > 0 && (
+        <Alert variant="warning" className="mb-4">
+          <Alert.Heading>Low Stock Materials</Alert.Heading>
+          <p>You have {lowStockMaterials.length} materials that are below the preorder level.</p>
+          <hr />
+          <div className="d-flex justify-content-end">
+            <Button 
+              variant="outline-warning" 
+              onClick={() => window.location.href = '/materials'}
+            >
+              View Materials
+            </Button>
+          </div>
+        </Alert>
+      )}
 
       <Row className="mb-4">
         <Col>
@@ -438,11 +550,95 @@ const Dashboard = () => {
               font-size: 1.8rem;
             }
           }
+
+          /* New Notification Styles */
+          .notification-btn {
+            position: relative;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          .notification-badge {
+            top: -5px;
+            right: -5px;
+            font-size: 0.6rem;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          .notification-panel {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            width: 320px;
+            max-height: 400px;
+            z-index: 1000;
+            border-radius: 8px;
+            border: none;
+          }
+          
+          .notification-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+          }
+          
+          .notification-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: background-color 0.2s;
+          }
+          
+          .notification-item:hover {
+            background-color: rgba(0,0,0,0.02);
+          }
+          
+          .notification-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+          }
+          
+          .notification-icon.warning {
+            background-color: #fff3e0;
+            color: #f57c00;
+          }
+          
+          .notification-icon svg {
+            width: 20px;
+            height: 20px;
+          }
+          
+          .notification-content {
+            flex-grow: 1;
+          }
         `}
       </style>
     </Container>
   );
 };
 
+// Helper component for the warning icon
+const WarningIconSVG = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M8 1.45l6.705 11.29A1 1 0 0 1 13.847 14H2.153a1 1 0 0 1-.858-1.51L8 1.45zM8 0a1 1 0 0 0-.866.5l-7 12A1 1 0 0 0 1 14h14a1 1 0 0 0 .866-1.5l-7-12A1 1 0 0 0 8 0zm0 8a1 1 0 0 0-1 1v2a1 1 0 1 0 2 0V9a1 1 0 0 0-1-1zm0-3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+  </svg>
+);
 
 export default Dashboard;

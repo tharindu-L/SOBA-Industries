@@ -107,4 +107,102 @@ const getSupervisorProfile = async (req, res) => {
   }
 };
 
-export { registerSupervisor, loginSupervisor, getSupervisorProfile };
+// Get low stock materials
+const getLowStockMaterials = async (req, res) => {
+  try {
+    const [materials] = await pool.query(
+      'SELECT * FROM materials WHERE availableQty <= preorder_level'
+    );
+    
+    res.json({ 
+      success: true, 
+      lowStockMaterials: materials 
+    });
+  } catch (error) {
+    console.error('Error fetching low stock materials:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching low stock materials' 
+    });
+  }
+};
+
+// Update material quantities when used in production
+const useMaterials = async (req, res) => {
+  const { materials } = req.body;
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    // Validate input
+    if (!Array.isArray(materials) || materials.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid materials data. Please provide an array of materials.'
+      });
+    }
+    
+    // Process each material
+    for (const material of materials) {
+      const { itemId, quantity } = material;
+      
+      if (!itemId || !quantity || isNaN(quantity) || quantity <= 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Each material must have a valid itemId and quantity.'
+        });
+      }
+      
+      // Check if we have enough of this material
+      const [materialData] = await connection.query(
+        'SELECT availableQty FROM materials WHERE itemId = ?',
+        [itemId]
+      );
+      
+      if (materialData.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({
+          success: false,
+          message: `Material with ID ${itemId} not found.`
+        });
+      }
+      
+      const availableQty = materialData[0].availableQty;
+      
+      if (availableQty < quantity) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient quantity for material ID ${itemId}. Available: ${availableQty}, Requested: ${quantity}`
+        });
+      }
+      
+      // Update material quantity
+      await connection.query(
+        'UPDATE materials SET availableQty = availableQty - ? WHERE itemId = ?',
+        [quantity, itemId]
+      );
+    }
+    
+    await connection.commit();
+    
+    res.json({
+      success: true,
+      message: 'Materials updated successfully'
+    });
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating material quantities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating material quantities'
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+export { registerSupervisor, loginSupervisor, getSupervisorProfile, getLowStockMaterials, useMaterials };
