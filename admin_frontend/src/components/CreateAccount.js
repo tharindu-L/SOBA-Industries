@@ -87,9 +87,9 @@ const CreateAccount = () => {
       // Determine endpoint based on selected role
       let endpoint = '';
       if (formData.role === 'cashier') {
-        endpoint = 'http://localhost:4000/api/cashier/register';
+        endpoint = 'http://localhost:4000/api/user/cashier/register';
       } else if (formData.role === 'supervisor') {
-        endpoint = 'http://localhost:4000/api/supervisor/register';
+        endpoint = 'http://localhost:4000/api/supervisors/register';
       } else {
         throw new Error('Invalid role selected');
       }

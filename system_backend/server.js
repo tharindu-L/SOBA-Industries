@@ -49,7 +49,7 @@ app.use('/api/analytics',AnalyticsRouter);
 app.use('/api/bill', billRoutes);
 app.use('/api/custom-orders', CustomRouter);
 app.use('/api/cashier', cashierRouter);
-// Keep only this one to ensure consistent routing
+// Keep this line to ensure consistent routing
 app.use('/api/supervisors', supervisorsRouter);
 
 // Add a test endpoint for the supervisors API
