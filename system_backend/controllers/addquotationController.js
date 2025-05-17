@@ -2,7 +2,7 @@ import pool from '../config/db.js';
 
 // Create a new quotation
 export const createQuotation = async (req, res) => {
-  const { job_description, userId } = req.body;
+  const { job_description, userId, wantDate } = req.body;
 
   if (!job_description || !userId) {
     return res.status(400).json({ success: false, message: "Job description and userId are required" });
@@ -10,8 +10,8 @@ export const createQuotation = async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO quotations (customer_id, job_description, quotation_amount, status) VALUES (?, ?, 0.00, "Pending")',
-      [userId, job_description]
+      'INSERT INTO quotations (customer_id, job_description, quotation_amount, status, want_date) VALUES (?, ?, 0.00, "Pending", ?)',
+      [userId, job_description, wantDate || null]
     );
     return res.status(201).json({
       success: true,
@@ -78,9 +78,9 @@ export const updateQuotationStatus = async (req, res) => {
 
     // If the status is "Approved", save it as a job
     if (status === "Approved") {
-      // Fetch the quotation details along with customer_id
+      // Fetch the quotation details along with customer_id and want_date
       const [quotation] = await pool.query(
-        'SELECT job_description AS name, customer_id, quotation_amount FROM quotations WHERE id = ?',
+        'SELECT job_description AS name, customer_id, quotation_amount, want_date FROM quotations WHERE id = ?',
         [quotationId]
       );
 
@@ -89,14 +89,15 @@ export const updateQuotationStatus = async (req, res) => {
         const jobName = quotation[0].name;
         const customerId = quotation[0].customer_id;
         const quotationAmount = quotation[0].quotation_amount;
+        const wantDate = quotation[0].want_date; // Get the want date
         const startDate = new Date(); // Set current date as start date
         const finishDate = null;
         const jobStatus = "Pending";
 
-        // Save as job with customer_id
+        // Save as job with customer_id and include want_date as due_date
         await pool.query(
-          'INSERT INTO jobs (quotation_id, job_name, start_date, finish_date, status, customer_id, quotation_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [quotationId, jobName, startDate, finishDate, jobStatus, customerId, quotationAmount]
+          'INSERT INTO jobs (quotation_id, job_name, start_date, finish_date, status, customer_id, quotation_amount, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [quotationId, jobName, startDate, finishDate, jobStatus, customerId, quotationAmount, wantDate]
         );
       }
     }

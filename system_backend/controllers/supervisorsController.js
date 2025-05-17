@@ -3,56 +3,59 @@ import { createToken } from '../middleware/token.js';
 import pool from '../config/db.js';
 import validator from 'validator';
 
-// Helper function to generate a nickname
-const generateNickname = (name) => {
-  return name.toLowerCase().replace(/\s+/g, '_') + Math.floor(1000 + Math.random() * 9000);
-};
-
-// Register Supervisor with nickname generation
+// Register Supervisor
 const registerSupervisor = async (req, res) => {
-  const { name, password, email, tel_num, nic } = req.body;
+  const { username, email, password, tel_num } = req.body;
   try {
     // Validation checks
     if (!validator.isEmail(email)) {
       return res.json({ success: false, message: 'Please enter a valid email' });
     }
     if (password.length < 8) {
-      return res.json({ success: false, message: 'Please enter a strong password' });
+      return res.json({ success: false, message: 'Please enter a strong password (at least 8 characters)' });
     }
-    if (tel_num.length !== 10) {
+    if (!tel_num || tel_num.length !== 10) {
       return res.json({ success: false, message: 'Please enter a valid phone number' });
+    }
+
+    // Create the supervisors table if it doesn't exist
+    const CREATE_TABLE_QUERY = `
+      CREATE TABLE IF NOT EXISTS supervisors (
+        SupervisorID INT AUTO_INCREMENT PRIMARY KEY,
+        supervisor_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        tel_num VARCHAR(15),
+        profile_image VARCHAR(255),
+        join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await pool.query(CREATE_TABLE_QUERY);
+
+    // Check if supervisor with that email already exists
+    const CHECK_EMAIL_QUERY = 'SELECT * FROM supervisors WHERE email = ?';
+    const [existingSupervisors] = await pool.query(CHECK_EMAIL_QUERY, [email]);
+
+    if (existingSupervisors.length > 0) {
+      return res.json({ success: false, message: 'Email already exists' });
     }
 
     // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Generate a nickname using the name
-    const nickname = generateNickname(name);
+    // Insert supervisor into the database - using 'supervisor_name' column instead of 'name'
+    const INSERT_SUPERVISOR_QUERY = 'INSERT INTO supervisors (supervisor_name, email, password, tel_num) VALUES (?, ?, ?, ?)';
+    const [result] = await pool.query(INSERT_SUPERVISOR_QUERY, [username, email, hashedPassword, tel_num]);
 
-    // Handle profile image
-    const profileImage = req.file ? req.file.filename : null;
-
-    // Insert user into the database
-    const INSERT_USER_QUERY =
-      'INSERT INTO supervisors (supervisor_name, email, password, tel_num, profile_image, nickname, nic) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    const [result] = await pool.query(INSERT_USER_QUERY, [
-      name,
-      email,
-      hashedPassword,
-      tel_num,
-      profileImage,
-      nickname,
-      nic
-    ]);
-
-    // Generate token for the newly registered user
+    // Generate token for the newly registered supervisor
     const token = createToken(result.insertId);
 
-    res.json({ success: true, token, nickname });
+    res.json({ success: true, token, message: 'Supervisor registered successfully' });
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: 'Email already exists or error occurred' });
+    console.error('Error registering supervisor:', error);
+    res.status(500).json({ success: false, message: 'Server error during registration' });
   }
 };
 
@@ -60,110 +63,48 @@ const registerSupervisor = async (req, res) => {
 const loginSupervisor = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const SELECT_USER_QUERY = 'SELECT * FROM supervisors WHERE email = ?';
-    const [rows] = await pool.query(SELECT_USER_QUERY, [email]);
+    const SELECT_SUPERVISOR_QUERY = 'SELECT * FROM supervisors WHERE email = ?';
+    const [rows] = await pool.query(SELECT_SUPERVISOR_QUERY, [email]);
 
     if (rows.length === 0) {
       return res.json({ success: false, message: 'Invalid email or password' });
     }
 
-    const user = rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
+    const supervisor = rows[0];
+    const isMatch = await bcrypt.compare(password, supervisor.password);
 
     if (!isMatch) {
       return res.json({ success: false, message: 'Invalid email or password' });
     }
 
-    const token = createToken(user.SupervisorID);
+    const token = createToken(supervisor.SupervisorID);
 
     res.json({ success: true, token });
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: 'Error logging in user' });
+    console.error('Error logging in supervisor:', error);
+    res.status(500).json({ success: false, message: 'Server error during login' });
   }
 };
 
-// Get Supervisors
-const getSupervisors = async (req, res) => {
+// Get Supervisor Profile
+const getSupervisorProfile = async (req, res) => {
   try {
-    const SELECT_USERS_QUERY =
-      'SELECT SupervisorID, supervisor_name, nickname, email, tel_num, profile_image FROM supervisors';
-    const [users] = await pool.query(SELECT_USERS_QUERY);
-
-    res.json({ success: true, users });
-  } catch (error) {
-    console.error('Error getting users:', error);
-    res.status(500).json({ success: false, message: 'Error getting users' });
-  }
-};
-
-// Delete Supervisor
-const deleteSupervisor = async (req, res) => {
-  const { userId } = req.body;
-  try {
-    const DELETE_USER_QUERY = 'DELETE FROM supervisors WHERE SupervisorID = ?';
-    const [result] = await pool.query(DELETE_USER_QUERY, [userId]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({ success: true, message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ success: false, message: 'Error deleting user' });
-  }
-};
-
-// Update Profile Image
-const updateProfileImage = async (req, res) => {
-  const userId = req.body.userId;
-
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: 'Image is required' });
-  }
-
-  const profileImage = req.file.filename;
-
-  const UPDATE_PROFILE_IMAGE_QUERY = `
-    UPDATE supervisors SET profile_image = ? WHERE SupervisorID = ?
-  `;
-
-  try {
-    await pool.query(UPDATE_PROFILE_IMAGE_QUERY, [profileImage, userId]);
-
-    res.status(200).json({ success: true, message: 'Profile image updated', profile_image: profileImage });
-  } catch (error) {
-    console.error('Error updating profile image:', error);
-    res.status(500).json({ success: false, message: 'Error updating profile image' });
-  }
-};
-
-// Get Supervisor by ID
-const getSupervisorById = async (req, res) => {
-  const { userId } = req.body;
-
-  try {
-    const SELECT_USER_QUERY =
-      'SELECT SupervisorID, supervisor_name, nickname, email, tel_num, profile_image, join_date FROM supervisors WHERE SupervisorID = ?';
-    const [rows] = await pool.query(SELECT_USER_QUERY, [userId]);
+    const supervisorId = req.body.userId; // Changed from req.userId to req.body.userId
+    
+    // Fetch supervisor data from the database
+    const SELECT_SUPERVISOR_QUERY = 'SELECT SupervisorID, supervisor_name, email, tel_num, profile_image, join_date FROM supervisors WHERE SupervisorID = ?';
+    const [rows] = await pool.query(SELECT_SUPERVISOR_QUERY, [supervisorId]);
 
     if (rows.length === 0) {
-      return res.json({ success: false, message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'Supervisor not found' });
     }
 
-    res.json({ success: true, user: rows[0] });
+    // Return supervisor data (excluding the password)
+    res.json({ success: true, ...rows[0] });
   } catch (error) {
-    console.error('Error getting user by ID:', error);
-    res.status(500).json({ success: false, message: 'Error fetching user data' });
+    console.error('Error fetching supervisor profile:', error);
+    res.status(500).json({ success: false, message: 'Server error during profile fetch' });
   }
 };
 
-export {
-  registerSupervisor,
-  loginSupervisor,
-  getSupervisors,
-  deleteSupervisor,
-  updateProfileImage,
-  getSupervisorById
-};
+export { registerSupervisor, loginSupervisor, getSupervisorProfile };

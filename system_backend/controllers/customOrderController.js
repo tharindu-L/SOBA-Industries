@@ -123,3 +123,124 @@ export const getCustomOrderRequests = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
+// The function that retrieves all custom orders needs to include the want_date field in its query
+
+export const getAllCustomOrders = async (req, res) => {
+  try {
+    // Add some debug logging
+    console.log("Fetching all custom orders with want_date field");
+    
+    // This query already includes want_date
+    const [orders] = await pool.query(
+      `SELECT 
+        co.order_id as orderId, 
+        co.customer_id as customerId, 
+        co.description, 
+        co.quantity, 
+        co.special_notes as specialNotes, 
+        co.status, 
+        co.created_at as createdAt,
+        co.category,
+        co.want_date as wantDate,
+        GROUP_CONCAT(cod.file_name) as designFiles
+      FROM custom_orders co
+      LEFT JOIN custom_order_designs cod ON co.order_id = cod.order_id
+      GROUP BY co.order_id
+      ORDER BY co.created_at DESC`
+    );
+
+    // Add debug logging to check what's coming back
+    console.log(`Retrieved ${orders.length} orders`);
+    if (orders.length > 0) {
+      console.log("Sample order data (first record):", 
+        { 
+          orderId: orders[0].orderId,
+          wantDate: orders[0].wantDate,
+          desc: orders[0].description.substring(0, 20) + '...'
+        }
+      );
+    }
+
+    // Process the results to format design files as arrays
+    const formattedOrders = orders.map(order => ({
+      ...order,
+      designFiles: order.designFiles ? order.designFiles.split(',') : []
+    }));
+
+    res.status(200).json({
+      success: true,
+      orders: formattedOrders
+    });
+  } catch (err) {
+    console.error("Error in getAllCustomOrders:", err);
+    res.status(500).json({ success: false, message: "Error fetching custom orders" });
+  }
+};
+
+export const createCustomOrder = async (req, res) => {
+  try {
+    // For FormData requests, wantDate will be in req.body
+    console.log("Request body:", req.body); // Add this for debugging
+    
+    const { customerId, description, quantity, specialNotes, category, wantDate } = req.body;
+    
+    // Log the extracted wantDate to verify it's being received
+    console.log("Received want date:", wantDate);
+    
+    // Validate required fields
+    if (!customerId || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID and description are required',
+      });
+    }
+    
+    // Explicitly prepare the wantDate for SQL insertion
+    // Convert to proper SQL date format if needed or use null if missing
+    const formattedWantDate = wantDate ? new Date(wantDate).toISOString().split('T')[0] : null;
+    console.log("Formatted want date for SQL:", formattedWantDate);
+
+    // Insert the order with the want_date
+    const [orderResult] = await pool.query(
+      `INSERT INTO custom_orders 
+       (customer_id, description, quantity, special_notes, category, want_date) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [customerId, description, quantity || 1, specialNotes || null, category || null, formattedWantDate]
+    );
+    
+    // Process design files if any
+    const designFiles = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const [fileResult] = await pool.query(
+          'INSERT INTO custom_order_designs (order_id, file_name, file_type, file_path) VALUES (?, ?, ?, ?)',
+          [orderResult.insertId, file.filename, file.mimetype, file.path]
+        );
+        designFiles.push(file.filename);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Custom order created successfully',
+      order: {
+        orderId: orderResult.insertId,
+        customerId,
+        description,
+        quantity: quantity || 1,
+        specialNotes: specialNotes || null,
+        status: 'pending',
+        category: category || null,
+        wantDate: formattedWantDate, // Include this in the response
+        designFiles
+      }
+    });
+  } catch (err) {
+    console.error('Error creating custom order:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating custom order'
+    });
+  }
+};
