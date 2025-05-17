@@ -1,7 +1,6 @@
-
 .container {
     max-width: 900px;
-    margin-top: 110px;
+    margin-top: 20px; /* Changed from 110px to 20px to remove space for navbar */
     margin-bottom: 20px;
   }
   
@@ -95,4 +94,3 @@
     text-align: center;
     color: #777;
   }
-  
