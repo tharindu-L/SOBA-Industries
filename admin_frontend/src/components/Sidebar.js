@@ -28,6 +28,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Add this import for Reports icon
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -267,6 +268,41 @@ const Sidebar = () => {
                 <ReceiptIcon />
               </ListItemIcon>
               <ListItemText primary="Bills" />
+            </ListItem>
+            
+            <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
+            
+            {/* Reports - New Item */}
+            <ListItem 
+              button 
+              component={Link} 
+              to="/reports"
+              sx={{
+                backgroundColor: isActive('/reports') ? 'rgba(255,255,255,0.2)' : 'transparent',
+                '&:hover': {
+                  backgroundColor: isActive('/reports') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+                },
+                borderRadius: '4px',
+                mx: 1,
+                mb: 0.5,
+                position: 'relative',
+                '&::before': isActive('/reports') ? {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  height: '60%',
+                  width: '4px',
+                  backgroundColor: '#fff',
+                  borderRadius: '0 4px 4px 0',
+                } : {}
+              }}
+            >
+              <ListItemIcon sx={{ color: 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
+                <AssessmentIcon />
+              </ListItemIcon>
+              <ListItemText primary="Reports" />
             </ListItem>
             
             <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />

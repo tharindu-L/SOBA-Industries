@@ -41,6 +41,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { assets } from '../assest/assest';
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Add this import for Reports icon
 
 const Sidebar = () => {
   const theme = useTheme();
@@ -96,6 +97,11 @@ const Sidebar = () => {
       text: 'Billing',
       icon: <ReceiptIcon />,
       path: '/bills'
+    },
+    {
+      text: 'Reports',
+      icon: <AssessmentIcon />,
+      path: '/reports'
     }
   ];
 
