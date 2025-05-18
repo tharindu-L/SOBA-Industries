@@ -9,8 +9,8 @@ const getNextOrderId = async (connection) => {
         // Get the highest current ID number
         const [result] = await connection.query(`
             SELECT order_id FROM manual_orders 
-            WHERE order_id LIKE 'CC%' 
-            ORDER BY CAST(SUBSTRING(order_id, 3) AS UNSIGNED) DESC 
+            WHERE order_id LIKE 'SCC%' 
+            ORDER BY CAST(SUBSTRING(order_id, 4) AS UNSIGNED) DESC 
             LIMIT 1
         `);
         
@@ -18,12 +18,12 @@ const getNextOrderId = async (connection) => {
         if (result.length > 0) {
             // Extract the number part and increment
             const currentId = result[0].order_id;
-            const currentNumber = parseInt(currentId.substring(2), 10);
+            const currentNumber = parseInt(currentId.substring(3), 10);
             nextNumber = currentNumber + 1;
         }
         
-        // Format with leading zeros (e.g., CC001)
-        return `CC${nextNumber.toString().padStart(3, '0')}`;
+        // Format with leading zeros (e.g., SCC001)
+        return `SCC${nextNumber.toString().padStart(3, '0')}`;
     } catch (error) {
         console.error('Error generating next order ID:', error);
         // Fallback to the old format if there's an error
