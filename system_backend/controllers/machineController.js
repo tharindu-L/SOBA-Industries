@@ -235,3 +235,29 @@ export const getMaintenanceRecords = async (req, res) => {
     });
   }
 };
+
+// Add a new endpoint specifically for supervisors to fetch materials
+export const getSupervisorMaterials = async (req, res) => {
+  try {
+    console.log('Fetching materials for supervisor');
+    
+    // Get all materials from the database
+    const [materials] = await pool.query(
+      'SELECT itemId as item_id, itemName as item_name, availableQty as available_qty, unitPrice as unit_price, preorder_level FROM materials'
+    );
+    
+    console.log(`Found ${materials.length} materials for supervisor`);
+    
+    res.json({
+      success: true,
+      materials: materials
+    });
+  } catch (error) {
+    console.error('Error fetching materials for supervisor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch materials. Please try again.',
+      error: error.message
+    });
+  }
+};

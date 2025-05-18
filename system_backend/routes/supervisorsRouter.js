@@ -7,6 +7,7 @@ import {
   useMaterials,
   getLowStockProducts
 } from '../controllers/supervisorsController.js';
+import { getSupervisorMaterials } from '../controllers/machineController.js';
 import authMiddleware from '../middleware/auth.js';
 
 const supervisorsRouter = express.Router();
@@ -26,5 +27,8 @@ supervisorsRouter.get('/profile', authMiddleware, getSupervisorProfile);
 supervisorsRouter.get('/low-stock-materials', authMiddleware, getLowStockMaterials);
 supervisorsRouter.post('/use-materials', authMiddleware, useMaterials);
 supervisorsRouter.get('/low-stock-products', authMiddleware, getLowStockProducts);
+
+// Add the new route for fetching materials
+supervisorsRouter.get('/materials', authMiddleware, getSupervisorMaterials);
 
 export default supervisorsRouter;

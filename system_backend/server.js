@@ -57,6 +57,25 @@ app.get('/api/supervisors/test', (req, res) => {
   res.json({ success: true, message: 'Supervisors API is working!' });
 });
 
+// Ensure supervisors can access material APIs
+app.get('/api/supervisors/materials', supervisorsRouter);
+
+// Make material routes available to supervisors
+app.get('/api/material/get_all', async (req, res) => {
+  try {
+    console.log('Server endpoint: Fetching all materials');
+    const [materials] = await pool.query(
+      'SELECT itemId as item_id, itemName as item_name, availableQty as available_qty, unitPrice as unit_price, preorder_level FROM materials'
+    );
+    
+    console.log(`Found ${materials.length} materials`);
+    res.json({ success: true, materials });
+  } catch (error) {
+    console.error('Error fetching all materials:', error);
+    res.status(500).json({ success: false, message: 'Error fetching materials' });
+  }
+});
+
 // Add endpoint to get low stock materials
 app.get('/api/material/low-stock', async (req, res) => {
   try {

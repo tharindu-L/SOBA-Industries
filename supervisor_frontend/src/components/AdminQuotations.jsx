@@ -162,57 +162,95 @@ const AdminQuotations = () => {
     };
   }, []); // Empty dependency array ensures this only runs once on mount
 
-  // Fetch Materials
-  const fetchMaterials = async () => {
-    setError(null);
-    try {
-      const response = await fetch('http://localhost:4000/api/material/get_all', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setMaterials(data.materials);
-        // Initialize with empty array if no materials
-        if (data.materials.length > 0) {
-          setMaterialItems([
-            {
-              material_name: data.materials[0].item_name,
-              quantity: 1,
-              unit_price: parseFloat(data.materials[0].unit_price),
-              material_id: data.materials[0].item_id,
-              available_qty: data.materials[0].available_qty
-            }
-          ]);
-        } else {
-          setMaterialItems([]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching materials:', error);
-      setError('Failed to fetch materials. Please try again later.');
-    }
-  };
-
-  const handleUpdateClick = (order) => {
-    setCurrentOrder(order);
-    setStatus(order.status || 'pending');
-    setServiceCharge(0); // Reset service charge when opening modal
-    setMaterialItems([]); // Reset material items
-    setStockErrors({});
-    setError(null);
-    setShowModal(true);
+  // Enhance the fetchMaterials function with better error handling and retry capability
+const fetchMaterials = async (retryCount = 0) => {
+  setError(null);
+  try {
+    console.log('Fetching materials...');
     
-    if (order.status === 'in_progress' || status === 'in_progress') {
-      fetchMaterials();
+    // Try multiple endpoints to get materials (for redundancy)
+    const endpoints = [
+      'http://localhost:4000/api/material/get_all', 
+      'http://localhost:4000/api/supervisors/materials',
+      'http://localhost:4000/api/material/get'
+    ];
+    
+    let response = null;
+    let data = null;
+    let success = false;
+    
+    // Try each endpoint until one succeeds
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}`);
+        response = await fetch(endpoint, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          cache: 'no-store'
+        });
+        
+        if (response.ok) {
+          data = await response.json();
+          if (data.success && data.materials && data.materials.length > 0) {
+            console.log(`Successfully fetched ${data.materials.length} materials from ${endpoint}`);
+            success = true;
+            break;
+          }
+        }
+      } catch (endpointError) {
+        console.warn(`Error with endpoint ${endpoint}:`, endpointError);
+      }
     }
-  };
+    
+    if (success) {
+      console.log('Material data:', data.materials.slice(0, 2)); // Log first two materials for debugging
+      setMaterials(data.materials);
+      
+      // Initialize with the first material
+      if (data.materials.length > 0) {
+        setMaterialItems([
+          {
+            material_name: data.materials[0].item_name,
+            quantity: 1,
+            unit_price: parseFloat(data.materials[0].unit_price),
+            material_id: data.materials[0].item_id,
+            available_qty: data.materials[0].available_qty
+          }
+        ]);
+      } else {
+        setMaterialItems([]);
+      }
+    } else if (retryCount < 3) {
+      // Retry up to 3 times with exponential backoff
+      console.log(`Retrying fetchMaterials (attempt ${retryCount + 1})...`);
+      setTimeout(() => {
+        fetchMaterials(retryCount + 1);
+      }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s backoff
+    } else {
+      throw new Error('Failed to fetch materials from any endpoint');
+    }
+  } catch (error) {
+    console.error('Error fetching materials:', error);
+    setError('Failed to fetch materials. Please try again later.');
+  }
+};
+
+  // Enhance the handleUpdateClick function to ensure materials are loaded
+const handleUpdateClick = (order) => {
+  setCurrentOrder(order);
+  setStatus(order.status || 'pending');
+  setServiceCharge(0); // Reset service charge when opening modal
+  setMaterialItems([]); // Reset material items
+  setStockErrors({});
+  setError(null);
+  setShowModal(true);
+  
+  // Always fetch materials regardless of status
+  fetchMaterials();
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
