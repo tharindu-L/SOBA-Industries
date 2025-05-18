@@ -26,8 +26,17 @@ import {
   CardContent,
   Grid,
   Alert,
-  Snackbar
+  Snackbar,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Divider,
+  InputAdornment,
+  TextField,
+  IconButton
 } from '@mui/material';
+import ClearIcon from '@mui/icons-material/Clear';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import axios from 'axios';
 
 // Status color mapping - make sure 'completed' has a distinct color
@@ -50,6 +59,10 @@ const CustomOrdersPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  // Add new state for filter
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch custom orders from API
   const fetchOrders = async () => {
@@ -165,6 +178,56 @@ const CustomOrdersPage = () => {
     }
   };
 
+  // Handle status filter change
+  const handleStatusFilterChange = (event) => {
+    setStatusFilter(event.target.value);
+    setPage(0); // Reset to first page when filtering
+  };
+
+  // Handle source filter change
+  const handleSourceFilterChange = (event) => {
+    setSourceFilter(event.target.value);
+    setPage(0); // Reset to first page when filtering
+  };
+
+  // Apply filters to orders
+  const filteredOrders = orders.filter(order => {
+    // Status filter
+    if (statusFilter !== 'all' && order.status !== statusFilter) {
+      return false;
+    }
+    
+    // Source filter (assuming there's a source or channel field)
+    // Modify this based on your actual data structure
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'cashier' && order.source !== 'cashier') {
+        return false;
+      } else if (sourceFilter === 'online' && order.source !== 'online') {
+        return false;
+      }
+    }
+    
+    // Search query (check request ID or customer name)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const requestId = order.requestId?.toString().toLowerCase() || '';
+      const customerName = order.customerName?.toLowerCase() || '';
+      
+      if (!requestId.includes(query) && !customerName.includes(query)) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setSourceFilter('all');
+    setSearchQuery('');
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -176,6 +239,91 @@ const CustomOrdersPage = () => {
           {error}
         </Alert>
       )}
+
+      {/* Replace the existing filter controls with a more consistent design */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Filter Orders
+            <FilterAltIcon sx={{ verticalAlign: 'middle', ml: 1 }} />
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth variant="outlined" size="small">
+                <InputLabel id="status-filter-label">Status</InputLabel>
+                <Select
+                  labelId="status-filter-label"
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Status"
+                >
+                  <MenuItem value="all">All Statuses</MenuItem>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth variant="outlined" size="small">
+                <InputLabel id="source-filter-label">Order Source</InputLabel>
+                <Select
+                  labelId="source-filter-label"
+                  id="source-filter"
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  label="Order Source"
+                >
+                  <MenuItem value="all">All Sources</MenuItem>
+                  <MenuItem value="cashier">Cashier Orders</MenuItem>
+                  <MenuItem value="online">Online Orders</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                size="small"
+                label="Search by Request ID or Customer"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  endAdornment: searchQuery ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="clear search"
+                        onClick={() => setSearchQuery('')}
+                        edge="end"
+                        size="small"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }}
+              />
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Showing {filteredOrders.length} of {orders.length} orders
+            </Typography>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={clearFilters}
+              disabled={statusFilter === 'all' && sourceFilter === 'all' && !searchQuery}
+            >
+              Clear All Filters
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <Box display="flex" justifyContent="center" my={4}>
@@ -198,7 +346,7 @@ const CustomOrdersPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {orders
+                {filteredOrders
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((order) => (
                     <TableRow key={order.requestId} hover>
@@ -228,10 +376,10 @@ const CustomOrdersPage = () => {
                     </TableRow>
                   ))}
                 
-                {orders.length === 0 && (
+                {filteredOrders.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} align="center">
-                      No custom orders found
+                      {orders.length === 0 ? "No custom orders found" : "No orders match the selected filters"}
                     </TableCell>
                   </TableRow>
                 )}
@@ -242,7 +390,7 @@ const CustomOrdersPage = () => {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={orders.length}
+            count={filteredOrders.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

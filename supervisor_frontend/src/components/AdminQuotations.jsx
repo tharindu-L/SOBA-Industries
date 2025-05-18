@@ -1,5 +1,5 @@
-import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table, Tooltip, OverlayTrigger } from 'react-bootstrap';
-import { CheckCircle, Clock, FileEarmarkCheck, Plus, Search, Trash, XCircle } from 'react-bootstrap-icons';
+import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table, Tooltip, OverlayTrigger, Nav, Tabs, Tab, InputGroup } from 'react-bootstrap';
+import { CheckCircle, Clock, FileEarmarkCheck, Plus, Search, Trash, XCircle, FunnelFill } from 'react-bootstrap-icons';
 import React, { useEffect, useState } from 'react';
 
 const statusOptions = ['pending', 'in_progress', 'completed', 'cancelled'];
@@ -50,6 +50,27 @@ const AdminQuotations = () => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [invoiceData, setInvoiceData] = useState({});
   const [refreshInterval, setRefreshInterval] = useState(null);
+
+  // Add filter states
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [approvalFilter, setApprovalFilter] = useState('all');
+  const [dueDateFilter, setDueDateFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Update category filter options to include the specific categories needed
+  const categoryOptions = [
+    { value: 'all', label: 'All Categories' },
+    { value: 'medals', label: 'Medals' },
+    { value: 'badges', label: 'Badges' },
+    { value: 'mugs', label: 'Mugs' },
+    { value: 'souvenirs', label: 'Souvenirs' },
+    { value: 'furniture', label: 'Furniture' },
+    { value: 'decor', label: 'Decor' },
+    { value: 'installation', label: 'Installation' },
+    { value: 'repair', label: 'Repair' },
+    { value: 'other', label: 'Other' }
+  ];
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -546,15 +567,104 @@ const AdminQuotations = () => {
   };
 
   // Filter orders based on search term
-  const filteredOrders = orders.filter(order => 
-    (order.description && order.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (order.customerId && order.customerId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (order.orderId && order.orderId.toString().includes(searchTerm.toLowerCase())) ||
-    (order.status && order.status.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const getFilteredOrders = () => {
+    // First apply search term filter
+    let filtered = orders.filter(order => {
+      if (!searchTerm) return true;
+      
+      const searchIn = [
+        order.orderId?.toString() || '',
+        order.customerId?.toLowerCase() || '',
+        order.description?.toLowerCase() || '',
+        order.status?.toLowerCase() || ''
+      ];
+      
+      return searchIn.some(field => field.includes(searchTerm.toLowerCase()));
+    });
+    
+    // Then apply category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(order => 
+        order.category?.toLowerCase() === categoryFilter.toLowerCase()
+      );
+    }
+    
+    // Apply order status filter
+    if (orderStatusFilter !== 'all') {
+      filtered = filtered.filter(order => 
+        order.status === orderStatusFilter
+      );
+    }
+    
+    // Apply approval status filter
+    if (approvalFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        // Only check approval for orders in progress
+        if (order.status !== 'in_progress') {
+          return approvalFilter === 'not_required';
+        }
+        
+        const approvalStatus = invoiceData[order.orderId]?.approvalStatus;
+        
+        if (approvalFilter === 'approved') {
+          return approvalStatus === 'approved';
+        } else if (approvalFilter === 'pending') {
+          return approvalStatus === 'pending';
+        } else if (approvalFilter === 'cancelled') {
+          return approvalStatus === 'cancelled';
+        }
+        
+        return false;
+      });
+    }
+    
+    // Apply due date filter
+    if (dueDateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(order => {
+        if (!order.wantDate) {
+          return dueDateFilter === 'not_specified';
+        }
+        
+        const dueDate = new Date(order.wantDate);
+        dueDate.setHours(0, 0, 0, 0);
+        
+        if (dueDateFilter === 'overdue') {
+          return dueDate < today;
+        } else if (dueDateFilter === 'today') {
+          return dueDate.getTime() === today.getTime();
+        } else if (dueDateFilter === 'tomorrow') {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          return dueDate.getTime() === tomorrow.getTime();
+        } else if (dueDateFilter === 'this_week') {
+          const endOfWeek = new Date(today);
+          endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+          return dueDate >= today && dueDate <= endOfWeek;
+        } else if (dueDateFilter === 'next_week') {
+          const startOfNextWeek = new Date(today);
+          startOfNextWeek.setDate(today.getDate() + (7 - today.getDay() + 1));
+          
+          const endOfNextWeek = new Date(startOfNextWeek);
+          endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+          
+          return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
+        }
+        
+        return false;
+      });
+    }
+    
+    return filtered;
+  };
 
-  // Sort orders
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
+  // Calculate filtered and sorted orders
+  const filteredAndSearchedOrders = getFilteredOrders();
+  
+  // Then apply sorting
+  const sortedOrders = [...filteredAndSearchedOrders].sort((a, b) => {
     if (sortField === 'wantDate') {
       // Debug the sort field values
       console.log(`Sorting by wantDate: ${a.orderId}=${a.wantDate} vs ${b.orderId}=${b.wantDate}`);
@@ -712,6 +822,15 @@ const AdminQuotations = () => {
     );
   };
 
+  // Reset filters
+  const resetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setOrderStatusFilter('all');
+    setApprovalFilter('all');
+    setDueDateFilter('all');
+  };
+
   return (
     <Container fluid className="py-4" style={styles.pageContainer} >
       <Card className="shadow-sm">
@@ -756,24 +875,141 @@ const AdminQuotations = () => {
             </Alert>
           )}
           
-          <Row className="mb-4">
-            <Col md={6}>
-              <div className="input-group">
-                <span className="input-group-text">
-                  <Search />
-                </span>
-                <Form.Control
-                  type="text"
-                  placeholder="Search by description, customer ID, order ID or status..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          {/* Replace the existing filter panel with improved filters */}
+          <Card className="mb-4">
+            <Card.Header className="bg-light">
+              <h5 className="mb-0">
+                <FunnelFill className="me-2" />
+                Filter Jobs
+              </h5>
+            </Card.Header>
+            <Card.Body>
+              <Row className="g-3">
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Product Category</Form.Label>
+                    <Form.Select 
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                    >
+                      {categoryOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Job Status</Form.Label>
+                    <Form.Select 
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">Approved</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Customer Approval</Form.Label>
+                    <Form.Select 
+                      value={approvalFilter}
+                      onChange={(e) => setApprovalFilter(e.target.value)}
+                    >
+                      <option value="all">All</option>
+                      <option value="approved">Customer Approved</option>
+                      <option value="pending">Awaiting Approval</option>
+                      <option value="cancelled">Customer Cancelled</option>
+                      <option value="not_required">Not Required</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Due Date</Form.Label>
+                    <Form.Select 
+                      value={dueDateFilter}
+                      onChange={(e) => setDueDateFilter(e.target.value)}
+                    >
+                      <option value="all">All Dates</option>
+                      <option value="overdue">Overdue Jobs</option>
+                      <option value="today">Due Today</option>
+                      <option value="tomorrow">Due Tomorrow</option>
+                      <option value="this_week">Due This Week</option>
+                      <option value="next_week">Due Next Week</option>
+                      <option value="not_specified">No Due Date</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="mt-3">
+                <Col>
+                  <Form.Group>
+                    <Form.Label>Search</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text>
+                        <Search />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder="Search by job ID, customer ID or description..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      {searchTerm && (
+                        <Button 
+                          variant="outline-secondary"
+                          onClick={() => setSearchTerm('')}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                  <small className="text-muted">
+                    Showing {sortedOrders.length} of {orders.length} jobs
+                  </small>
+                </div>
+                <div>
+                  <Badge bg="primary" className="me-2">
+                    Pending: {orders.filter(o => o.status === 'pending').length}
+                  </Badge>
+                  <Badge bg="info" className="me-2">
+                    In Progress: {orders.filter(o => o.status === 'in_progress').length}
+                  </Badge>
+                  <Badge bg="success" className="me-2">
+                    Completed: {orders.filter(o => o.status === 'completed').length}
+                  </Badge>
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm" 
+                    onClick={resetFilters}
+                    disabled={categoryFilter === 'all' && orderStatusFilter === 'all' && 
+                             approvalFilter === 'all' && dueDateFilter === 'all' && !searchTerm}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
               </div>
-            </Col>
-            <Col md={6} className="text-end">
-              <Badge bg="info">Total Jobs: {sortedOrders.length}</Badge>
-            </Col>
-          </Row>
+            </Card.Body>
+          </Card>
+
+          {/* Remove the old row with search box and dropdown since we've integrated it into the filter panel */}
 
           {isLoading && !showModal ? (
             <div className="text-center py-5" >
