@@ -51,11 +51,12 @@ const AdminQuotations = () => {
   const [invoiceData, setInvoiceData] = useState({});
   const [refreshInterval, setRefreshInterval] = useState(null);
 
-  // Fetch Orders
+  // Enhanced fetchOrders function to fetch from both sources
   const fetchOrders = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Fetch regular custom orders
       const response = await fetch('http://localhost:4000/api/order/all_custom_order', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -63,35 +64,86 @@ const AdminQuotations = () => {
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      let allOrders = [];
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log("Custom orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
+          allOrders = data.orders || [];
+          
+          // Mark these as customer-placed orders
+          allOrders = allOrders.map(order => ({
+            ...order,
+            source: 'customer'
+          }));
+        }
+      } else {
+        console.error("Failed to fetch customer custom orders:", response.status);
       }
       
-      const data = await response.json();
-      if (data.success) {
-        // Enhanced logging to check the want_date field
-        console.log("Orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
+      // Now fetch cashier-placed custom order requests
+      try {
+        const cashierOrdersResponse = await fetch('http://localhost:4000/api/custom-orders/all', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Cache-Control': 'no-cache'
+          }
+        });
         
-        // Log want dates specifically
-        if (data.orders && data.orders.length > 0) {
-          console.log("Want dates in first few orders:");
-          data.orders.slice(0, 5).forEach(order => {
-            console.log(`Order ${order.orderId}: want date = ${order.wantDate || 'not set'}, type = ${typeof order.wantDate}`);
-          });
+        if (cashierOrdersResponse.ok) {
+          const cashierOrdersData = await cashierOrdersResponse.json();
+          
+          if (cashierOrdersData.success && cashierOrdersData.orders) {
+            console.log("Cashier-placed custom orders received:", cashierOrdersData.orders.slice(0, 2));
+            
+            // Transform cashier-placed custom orders to match the existing order format
+            const transformedCashierOrders = cashierOrdersData.orders.map(request => ({
+              orderId: request.requestId,
+              customerId: request.customerName,
+              description: request.description,
+              category: request.itemType,
+              quantity: request.quantity,
+              wantDate: request.wantDate || null,
+              designFiles: request.designImage ? [request.designImage] : [],
+              createdAt: request.createdAt,
+              status: mapCustomOrderStatus(request.status),
+              special_notes: request.specialNotes,
+              source: 'cashier', // Add a source identifier
+              unitPrice: request.unitPrice,
+              totalAmount: request.totalAmount
+            }));
+            
+            // Combine both sets of orders
+            allOrders = [...allOrders, ...transformedCashierOrders];
+          }
         }
-        
-        setOrders(data.orders || []);
-        
-        // Fetch invoices for these orders to get customer approval status
-        await fetchInvoicesForOrders(data.orders || []);
-      } else {
-        setError(data.message || 'Failed to fetch orders');
+      } catch (cashierOrdersError) {
+        console.error("Error fetching cashier-placed custom orders:", cashierOrdersError);
+        // Continue without cashier orders if there's an error
       }
+      
+      // Update state with combined orders
+      console.log("Total custom orders to display:", allOrders.length);
+      setOrders(allOrders);
+      
+      // Fetch invoices for these orders to get customer approval status
+      await fetchInvoicesForOrders();
     } catch (error) {
       console.error('Error fetching orders:', error);
       setError('Network error while fetching orders. Please try again later.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to map custom order status to regular order status
+  const mapCustomOrderStatus = (customStatus) => {
+    switch (customStatus) {
+      case 'approved': return 'in_progress';
+      case 'completed': return 'completed';
+      case 'rejected': return 'cancelled';
+      default: return 'pending';
     }
   };
 
@@ -353,21 +405,49 @@ const handleUpdateClick = (order) => {
     setError(null);
 
     try {
+      // Determine endpoint and request body based on order source
+      let endpoint, requestBody;
+      
+      // For cashier-placed custom orders
+      if (currentOrder.source === 'cashier') {
+        endpoint = 'http://localhost:4000/api/order/status';
+        requestBody = {
+          orderId: currentOrder.orderId,
+          status: mapRegularToCustomStatus(status)
+        };
+      }
+      // For customer-placed custom orders
+      else if (currentOrder.source === 'custom_request') {
+        endpoint = 'http://localhost:4000/api/custom_order/update_status';
+        requestBody = {
+          requestId: currentOrder.orderId,
+          status: mapRegularToCustomStatus(status)
+        };
+      } 
+      // For regular customer orders
+      else {
+        endpoint = 'http://localhost:4000/api/order/status';
+        requestBody = {
+          orderId: currentOrder.orderId,
+          status
+        };
+      }
+
+      console.log(`Updating order with source ${currentOrder.source}:`, requestBody);
+
       // Update the order status
-      const statusResponse = await fetch('http://localhost:4000/api/order/status', {
+      const statusResponse = await fetch(endpoint, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          orderId: currentOrder.orderId,
-          status 
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!statusResponse.ok) {
-        throw new Error(`HTTP error! Status: ${statusResponse.status}`);
+        const errorText = await statusResponse.text();
+        throw new Error(`HTTP error! Status: ${statusResponse.status}. Details: ${errorText}`);
       }
 
       const statusData = await statusResponse.json();
@@ -408,7 +488,8 @@ const handleUpdateClick = (order) => {
         });
 
         if (!invoiceResponse.ok) {
-          throw new Error(`HTTP error! Status: ${invoiceResponse.status}`);
+          const errorText = await invoiceResponse.text();
+          throw new Error(`HTTP error creating invoice! Status: ${invoiceResponse.status}. Details: ${errorText}`);
         }
 
         const invoiceData = await invoiceResponse.json();
@@ -433,6 +514,16 @@ const handleUpdateClick = (order) => {
       setError(error.message || 'An error occurred during submission. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to map regular order status to custom order status
+  const mapRegularToCustomStatus = (regularStatus) => {
+    switch (regularStatus) {
+      case 'in_progress': return 'approved';
+      case 'completed': return 'completed';
+      case 'cancelled': return 'rejected';
+      default: return 'pending';
     }
   };
 
@@ -695,11 +786,17 @@ const handleUpdateClick = (order) => {
   };
 
   // Add this helper function to render descriptions
-  const renderDescription = (description) => {
-    if (!description) return 'Not specified';
+  const renderDescription = (description, special_notes) => {
+    let fullText = description || '';
     
-    if (description.length <= 30) {
-      return description;
+    if (special_notes) {
+      fullText = fullText ? `${fullText}\n\nSpecial Notes: ${special_notes}` : `Special Notes: ${special_notes}`;
+    }
+    
+    if (!fullText) return 'Not specified';
+    
+    if (fullText.length <= 30) {
+      return fullText;
     }
     
     return (
@@ -707,12 +804,12 @@ const handleUpdateClick = (order) => {
         placement="right"
         overlay={
           <Tooltip id={`tooltip-description-${Math.random()}`} style={{maxWidth: '400px'}}>
-            <div style={{whiteSpace: 'normal', textAlign: 'left'}}>{description}</div>
+            <div style={{whiteSpace: 'pre-wrap', textAlign: 'left'}}>{fullText}</div>
           </Tooltip>
         }
       >
         <div style={styles.descriptionCell}>
-          {description}
+          {fullText}
         </div>
       </OverlayTrigger>
     );
@@ -723,7 +820,7 @@ const handleUpdateClick = (order) => {
       <Card className="shadow-sm">
         <Card.Header className="bg-primary text-white">
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="mb-0">Order Management</h2>
+            <h2 className="mb-0">Job List Management</h2>
             <div>
               <Button 
                 variant="outline-light" 
@@ -775,6 +872,11 @@ const handleUpdateClick = (order) => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+            </Col>
+            <Col md={6} className="text-end">
+              <Badge bg="info" className="me-2">Total Jobs: {sortedOrders.length}</Badge>
+              <Badge bg="primary" className="me-2">Customer Orders: {sortedOrders.filter(order => order.source === 'customer').length}</Badge>
+              <Badge bg="secondary">Cashier Orders: {sortedOrders.filter(order => order.source !== 'customer').length}</Badge>
             </Col>
           </Row>
 
@@ -829,11 +931,16 @@ const handleUpdateClick = (order) => {
                 <tbody>
                   {sortedOrders.length > 0 ? (
                     sortedOrders.map((order) => (
-                      <tr key={order.orderId}>
+                      <tr key={`${order.source}-${order.orderId}`}>
                         <td>{order.orderId}</td>
                         <td>{order.customerId}</td>
-                        <td>{order.category || 'Not specified'}</td>
-                        <td>{renderDescription(order.description)}</td>
+                        <td>
+                          {order.category || 'Not specified'}
+                          {order.source !== 'customer' && (
+                            <Badge bg="warning" text="dark" className="ms-2">Cashier</Badge>
+                          )}
+                        </td>
+                        <td>{renderDescription(order.description, order.special_notes)}</td>
                         <td>{order.quantity}</td>
                         <td>
                           {order.wantDate ? (
@@ -852,7 +959,7 @@ const handleUpdateClick = (order) => {
                         <td>
                           {order.designFiles && order.designFiles.length > 0 ? (
                             <a 
-                              href={`http://localhost:4000/images/${order.designFiles[0]}`} 
+                              href={`http://localhost:4000${order.designFiles[0].startsWith('/') ? '' : '/images/'}${order.designFiles[0]}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-secondary"
@@ -862,7 +969,7 @@ const handleUpdateClick = (order) => {
                           ) : 'No files'}
                         </td>
                         <td>{new Date(order.createdAt).toLocaleString()}</td>
-                        <td>{renderStatusBadge(order.status)}</td>
+                        <td>{renderStatusBadge(order.status, order.orderId)}</td>
                         <td>
                           {renderApprovalBadge(order.orderId)}
                           {order.status === 'in_progress' && !invoiceData[order.orderId] && (
