@@ -37,6 +37,7 @@ import {
 } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import axios from 'axios';
 
 // Status color mapping - make sure 'completed' has a distinct color
@@ -61,7 +62,7 @@ const CustomOrdersPage = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   // Add new state for filter
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch custom orders from API
@@ -184,9 +185,9 @@ const CustomOrdersPage = () => {
     setPage(0); // Reset to first page when filtering
   };
 
-  // Handle source filter change
-  const handleSourceFilterChange = (event) => {
-    setSourceFilter(event.target.value);
+  // Handle category filter change
+  const handleCategoryFilterChange = (event) => {
+    setCategoryFilter(event.target.value);
     setPage(0); // Reset to first page when filtering
   };
 
@@ -197,14 +198,9 @@ const CustomOrdersPage = () => {
       return false;
     }
     
-    // Source filter (assuming there's a source or channel field)
-    // Modify this based on your actual data structure
-    if (sourceFilter !== 'all') {
-      if (sourceFilter === 'cashier' && order.source !== 'cashier') {
-        return false;
-      } else if (sourceFilter === 'online' && order.source !== 'online') {
-        return false;
-      }
+    // Category filter (item type)
+    if (categoryFilter !== 'all' && order.itemType.toLowerCase() !== categoryFilter.toLowerCase()) {
+      return false;
     }
     
     // Search query (check request ID or customer name)
@@ -224,7 +220,7 @@ const CustomOrdersPage = () => {
   // Clear all filters
   const clearFilters = () => {
     setStatusFilter('all');
-    setSourceFilter('all');
+    setCategoryFilter('all');
     setSearchQuery('');
   };
 
@@ -240,13 +236,15 @@ const CustomOrdersPage = () => {
         </Alert>
       )}
 
-      {/* Replace the existing filter controls with a more consistent design */}
+      {/* Updated filter section with category instead of source */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Filter Orders
-            <FilterAltIcon sx={{ verticalAlign: 'middle', ml: 1 }} />
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <FilterListIcon sx={{ mr: 1 }} />
+            <Typography variant="h6">
+              Filter Orders
+            </Typography>
+          </Box>
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
@@ -268,17 +266,19 @@ const CustomOrdersPage = () => {
             
             <Grid item xs={12} md={4}>
               <FormControl fullWidth variant="outlined" size="small">
-                <InputLabel id="source-filter-label">Order Source</InputLabel>
+                <InputLabel id="category-filter-label">Category</InputLabel>
                 <Select
-                  labelId="source-filter-label"
-                  id="source-filter"
-                  value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value)}
-                  label="Order Source"
+                  labelId="category-filter-label"
+                  id="category-filter"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  label="Category"
                 >
-                  <MenuItem value="all">All Sources</MenuItem>
-                  <MenuItem value="cashier">Cashier Orders</MenuItem>
-                  <MenuItem value="online">Online Orders</MenuItem>
+                  <MenuItem value="all">All Categories</MenuItem>
+                  <MenuItem value="mug">Mugs</MenuItem>
+                  <MenuItem value="souvenir">Souvenirs</MenuItem>
+                  <MenuItem value="medal">Medals</MenuItem>
+                  <MenuItem value="badge">Badges</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -317,7 +317,8 @@ const CustomOrdersPage = () => {
               variant="outlined" 
               size="small" 
               onClick={clearFilters}
-              disabled={statusFilter === 'all' && sourceFilter === 'all' && !searchQuery}
+              startIcon={<ClearIcon />}
+              disabled={statusFilter === 'all' && categoryFilter === 'all' && !searchQuery}
             >
               Clear All Filters
             </Button>
