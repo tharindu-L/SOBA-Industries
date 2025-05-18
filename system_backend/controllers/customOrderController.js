@@ -13,42 +13,93 @@ const ITEM_PRICES = {
 
 // Create custom order request
 export const createCustomOrderRequest = async (req, res) => {
-    const { customerName, description, itemType, quantity } = req.body;
+    console.log("Received custom order request:", req.body);
+    console.log("Files received:", req.files);
+    
+    const { customerName, description, itemType, quantity, specialNotes, wantDate } = req.body;
+    
+    // Validate required fields
+    if (!customerName || !description || !itemType || !quantity) {
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required fields'
+        });
+    }
+    
     const requestId = `CUST-REQ-${uuidv4().substr(0, 8)}`;
     
-    if (!ITEM_PRICES[itemType]) {
+    // Map from front-end item types to database enum values
+    const itemTypeMap = {
+        'Medals': 'medal',
+        'Badges': 'batch',
+        'Mugs': 'mug',
+        'Other': 'souvenir'
+    };
+    
+    const dbItemType = itemTypeMap[itemType] || 'souvenir';
+    
+    if (!ITEM_PRICES[dbItemType]) {
         return res.status(400).json({
             success: false,
             message: 'Invalid item type selected'
         });
     }
 
-    const unitPrice = ITEM_PRICES[itemType];
+    const unitPrice = ITEM_PRICES[dbItemType];
     const totalAmount = unitPrice * parseInt(quantity);
 
+    // Handle the design image
     let designImage = null;
-    if (req.file) {
-        designImage = `/uploads/custom-orders/${req.file.filename}`;
+    if (req.files && req.files.designImage && req.files.designImage[0]) {
+        designImage = `/uploads/custom-orders/${req.files.designImage[0].filename}`;
     }
+
+    // Format want date for SQL
+    const formattedWantDate = wantDate ? new Date(wantDate).toISOString().split('T')[0] : null;
 
     let connection;
     try {
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
+        // Log the query we're about to execute
+        console.log(`Inserting custom order request with values:`, {
+            requestId, customerName, description, dbItemType,
+            designImage, quantity, unitPrice, totalAmount,
+            specialNotes, formattedWantDate
+        });
+
         await connection.query(
             `INSERT INTO custom_order_requests (
                 request_id, customer_name, description, item_type, 
-                design_image, quantity, unit_price, total_amount
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                design_image, quantity, unit_price, total_amount,
+                special_notes, want_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                requestId, customerName, description, itemType,
-                designImage, quantity, unitPrice, totalAmount
+                requestId, customerName, description, dbItemType,
+                designImage, quantity, unitPrice, totalAmount,
+                specialNotes || null, formattedWantDate
             ]
         );
 
+        // Handle additional design files if any
+        const designFiles = [];
+        if (req.files && req.files.designFiles) {
+            for (const file of req.files.designFiles) {
+                const filePath = `/uploads/custom-orders/${file.filename}`;
+                await connection.query(
+                    `INSERT INTO custom_order_designs (
+                        request_id, file_name, file_path, file_type
+                    ) VALUES (?, ?, ?, ?)`,
+                    [requestId, file.filename, filePath, file.mimetype]
+                );
+                designFiles.push(filePath);
+            }
+        }
+
         await connection.commit();
 
+        // Send successful response
         res.status(201).json({
             success: true,
             message: 'Custom order request submitted successfully',
@@ -61,17 +112,31 @@ export const createCustomOrderRequest = async (req, res) => {
                 quantity,
                 unitPrice,
                 totalAmount,
+                specialNotes,
+                wantDate: formattedWantDate,
+                designFiles,
                 status: 'pending'
             }
         });
     } catch (error) {
         if (connection) await connection.rollback();
         
-        // Clean up uploaded file if error occurred
-        if (req.file) {
-            fs.unlink(path.join(__dirname, '../public/uploads/custom-orders', req.file.filename), err => {
-                if (err) console.error('Error deleting file:', err);
-            });
+        // Clean up uploaded files if error occurred
+        if (req.files) {
+            if (req.files.designImage) {
+                req.files.designImage.forEach(file => {
+                    fs.unlink(file.path, err => {
+                        if (err) console.error('Error deleting file:', err);
+                    });
+                });
+            }
+            if (req.files.designFiles) {
+                req.files.designFiles.forEach(file => {
+                    fs.unlink(file.path, err => {
+                        if (err) console.error('Error deleting file:', err);
+                    });
+                });
+            }
         }
         
         console.error('Error creating custom order request:', error);
@@ -102,7 +167,9 @@ export const getCustomOrderRequests = async (req, res) => {
                 CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
                 CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
                 status,
-                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt
+                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
+                DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
+                special_notes as specialNotes
             FROM custom_order_requests
             ORDER BY created_at DESC
         `);
@@ -141,7 +208,9 @@ export const getAllCustomOrders = async (req, res) => {
         CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
         CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
         status,
-        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
+        DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
+        special_notes as specialNotes
       FROM custom_order_requests
       ORDER BY created_at DESC`
     );
@@ -154,7 +223,8 @@ export const getAllCustomOrders = async (req, res) => {
           requestId: orders[0].requestId,
           customerName: orders[0].customerName,
           itemType: orders[0].itemType,
-          createdAt: orders[0].createdAt
+          createdAt: orders[0].createdAt,
+          wantDate: orders[0].wantDate
         }
       );
     }

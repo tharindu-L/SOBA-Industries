@@ -818,7 +818,9 @@ app.get('/api/custom-orders/all', async (req, res) => {
         CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
         CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
         status,
-        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
+        DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
+        special_notes as specialNotes
       FROM custom_order_requests
       ORDER BY created_at DESC`
     );
