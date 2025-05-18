@@ -253,6 +253,19 @@ const CustomOrdersList = () => {
                                                 </button>
                                             </div>
                                         )}
+                                        
+                                        {/* Display job status from supervisor */}
+                                        <div className="order-status-display">
+                                            <span className={`status-badge ${order.status}`}>
+                                                {order.type === 'custom' ? (
+                                                    order.status === 'completed' ? 'Completed' :
+                                                    order.status === 'pending' ? 'Pending' : 
+                                                    order.status || 'Unknown'
+                                                ) : (
+                                                    'Completed'
+                                                )}
+                                            </span>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
