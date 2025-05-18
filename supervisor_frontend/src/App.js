@@ -14,6 +14,7 @@ import MaterialList from './components/MaterialList';
 import OrderManagement from './components/OrdersManagement';
 import ProductList from './components/ProductList';
 import Sidebar from './components/Sidebar';
+import CustomOrdersPage from './pages/CustomOrdersPage'; // Import the new component
 
 // Protected Route Component
 const ProtectedRoute = ({ element }) => {
@@ -54,6 +55,7 @@ const App = () => {
             <Route path="/login" element={<LoginSignup />} />
             <Route path="/job-list" element={<ProtectedRoute element={<AdminQuotations />} />} />
             <Route path="/n-orders" element={<ProtectedRoute element={<OrderManagement />} />} />
+            <Route path="/custom-orders" element={<ProtectedRoute element={<CustomOrdersPage />} />} /> {/* Add the new route */}
           </Routes>
         </div>
       </div>

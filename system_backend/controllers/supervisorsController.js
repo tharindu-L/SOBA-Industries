@@ -230,11 +230,119 @@ const useMaterials = async (req, res) => {
   }
 };
 
+// Get all custom orders for supervisor view
+const getCustomOrders = async (req, res) => {
+  try {
+    console.log('Fetching all custom orders for supervisor');
+    
+    // First, ensure the table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS custom_order_requests (
+        request_id VARCHAR(50) PRIMARY KEY,
+        customer_name VARCHAR(100) NOT NULL,
+        description TEXT,
+        item_type ENUM('medal', 'batch', 'mug', 'souvenir') NOT NULL,
+        design_image VARCHAR(255),
+        quantity INT NOT NULL DEFAULT 1,
+        unit_price DECIMAL(10, 2) NOT NULL,
+        total_amount DECIMAL(10, 2) NOT NULL,
+        status ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        want_date DATE,
+        special_notes TEXT
+      )
+    `);
+    
+    const [orders] = await pool.query(
+      `SELECT 
+        request_id as requestId, 
+        customer_name as customerName,
+        description,
+        item_type as itemType,
+        design_image as designImage,
+        quantity,
+        CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
+        CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
+        status,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
+        DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
+        special_notes as specialNotes
+      FROM custom_order_requests
+      ORDER BY created_at DESC`
+    );
+    
+    console.log(`Found ${orders.length} custom orders`);
+    res.json({ 
+      success: true, 
+      orders 
+    });
+  } catch (error) {
+    console.error('Error fetching custom orders:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching custom orders' 
+    });
+  }
+};
+
+// Function to update custom order status
+const updateCustomOrderStatus = async (req, res) => {
+  try {
+    const { requestId, status } = req.body;
+    
+    console.log(`Updating order ${requestId} status to: ${status}`);
+    
+    if (!requestId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Request ID and status are required'
+      });
+    }
+    
+    // Only allow pending and completed statuses
+    const allowedStatuses = ['pending', 'completed'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status value. Only "pending" or "completed" are allowed.'
+      });
+    }
+    
+    const [result] = await pool.query(
+      'UPDATE custom_order_requests SET status = ? WHERE request_id = ?',
+      [status, requestId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Custom order not found'
+      });
+    }
+    
+    console.log(`Successfully updated order ${requestId} status to ${status}`);
+    res.json({
+      success: true,
+      message: status === 'completed' ? 
+        'Order marked as completed successfully' : 
+        'Order status updated to pending'
+    });
+  } catch (error) {
+    console.error('Error updating custom order status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating custom order status'
+    });
+  }
+};
+
 export { 
   registerSupervisor, 
   loginSupervisor, 
   getSupervisorProfile, 
   getLowStockMaterials, 
   useMaterials,
-  getLowStockProducts 
+  getLowStockProducts,
+  getCustomOrders,
+  updateCustomOrderStatus
 };
