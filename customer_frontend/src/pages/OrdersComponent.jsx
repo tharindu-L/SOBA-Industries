@@ -50,12 +50,7 @@ const OrdersComponent = () => {
       <div className="orders-container" style={{ marginLeft: '280px', width: 'calc(100% - 280px)', padding: '20px' }}>
         <div className="header-with-button">
           <h2>Your Orders</h2>
-          <button 
-            className="home-button"
-            onClick={() => navigate('/')}
-          >
-            Back to Home
-          </button>
+          {/* Removed the "Back to Home" button */}
         </div>
         
         {orders.length === 0 ? (

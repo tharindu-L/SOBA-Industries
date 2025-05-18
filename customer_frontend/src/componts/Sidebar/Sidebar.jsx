@@ -5,11 +5,11 @@ import axios from 'axios';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import DescriptionIcon from '@mui/icons-material/Receipt';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+// Removed DescriptionIcon import as it's no longer needed
 import { jwtDecode } from 'jwt-decode';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -285,43 +285,7 @@ const Sidebar = () => {
           </ListItem>
           <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 2, my: 0.5 }} />
 
-          <ListItem disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton 
-              onClick={() => navigate('/dashboard/bills')}
-              sx={{
-                backgroundColor: isActiveRoute('/dashboard/bills') ? 'rgba(255,255,255,0.2)' : 'transparent',
-                '&:hover': {
-                  backgroundColor: isActiveRoute('/dashboard/bills') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                },
-                borderRadius: '4px',
-                mx: 1,
-                position: 'relative',
-                '&::before': isActiveRoute('/dashboard/bills') ? {
-                  content: '""',
-                  position: 'absolute',
-                  left: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  height: '60%',
-                  width: '4px',
-                  backgroundColor: '#fff',
-                  borderRadius: '0 4px 4px 0',
-                } : {}
-              }}
-            >
-              <ListItemIcon sx={{ color: isActiveRoute('/dashboard/bills') ? '#fff' : 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
-                <DescriptionIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Bills"
-                primaryTypographyProps={{
-                  fontWeight: isActiveRoute('/dashboard/bills') ? '600' : '400',
-                  color: isActiveRoute('/dashboard/bills') ? '#fff' : 'inherit'
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-          <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 2, my: 0.5 }} />
+          {/* Removed the Bills ListItem and its Divider */}
 
           <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton 
