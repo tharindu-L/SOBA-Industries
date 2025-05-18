@@ -122,7 +122,7 @@ const CreateCustomOrder = () => {
 
             if (response.data.success) {
                 alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}`);
-                navigate('/custom-orders');
+                navigate('/cashier-dashboard');
             } else {
                 setError(response.data.message || 'Failed to create order request');
             }
@@ -254,6 +254,7 @@ const CreateCustomOrder = () => {
                     <button
                         type="submit"
                         className="submit-btn"
+                        onClick={() => navigate('/cashier-dashboard')}
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? (

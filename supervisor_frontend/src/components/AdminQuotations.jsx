@@ -679,68 +679,35 @@ const handleUpdateClick = (order) => {
     }
   };
 
-  // Status badge renderer with approval status
-  const renderStatusBadge = (status, orderId) => {
-    // First render the order status badge
-    let orderStatusBadge;
-    
-    switch (status) {
-      case 'completed':
-        orderStatusBadge = (
-          <Badge bg="success">
-            <FileEarmarkCheck className="me-1" /> Completed
-          </Badge>
-        );
-        break;
-      case 'cancelled':
-        orderStatusBadge = (
-          <Badge bg="danger">
-            <XCircle className="me-1" /> Cancelled
-          </Badge>
-        );
-        break;
-      case 'in_progress':
-        orderStatusBadge = (
-          <Badge bg="primary">
-            <Clock className="me-1" /> Approved
-          </Badge>
-        );
-        break;
-      default:
-        orderStatusBadge = (
-          <Badge bg="warning" text="dark">
-            <Clock className="me-1" /> Pending
-          </Badge>
-        );
-        break;
-    }
-    
-    // Then check if we have an invoice with approval status for this order
-    const invoiceInfo = invoiceData[orderId];
-    if (invoiceInfo && status === 'in_progress') {
-      let approvalBadge;
-      
-      switch (invoiceInfo.approvalStatus) {
-        case 'approved':
-          approvalBadge = <Badge bg="success" className="ms-2">Customer Approved</Badge>;
-          break;
-        case 'cancelled':
-          approvalBadge = <Badge bg="danger" className="ms-2">Customer Cancelled</Badge>;
-          break;
-        default:
-          approvalBadge = <Badge bg="warning" text="dark" className="ms-2">Approval Pending</Badge>;
-          break;
-      }
-      
+  // Status badge renderer - modified to only show order status, not approval status
+const renderStatusBadge = (status) => {
+  switch (status) {
+    case 'completed':
       return (
-        <div>
-          {orderStatusBadge} {approvalBadge}
-        </div>
+        <Badge bg="success">
+          <FileEarmarkCheck className="me-1" /> Completed
+        </Badge>
       );
-    }
-    
-    return orderStatusBadge;
-  };
+    case 'cancelled':
+      return (
+        <Badge bg="danger">
+          <XCircle className="me-1" /> Cancelled
+        </Badge>
+      );
+    case 'in_progress':
+      return (
+        <Badge bg="primary">
+          <Clock className="me-1" /> Approved
+        </Badge>
+      );
+    default:
+      return (
+        <Badge bg="warning" text="dark">
+          <Clock className="me-1" /> Pending
+        </Badge>
+      );
+  }
+};
 
   // Update renderApprovalBadge to improve debugging
   const renderApprovalBadge = (orderId) => {
@@ -969,7 +936,7 @@ const handleUpdateClick = (order) => {
                           ) : 'No files'}
                         </td>
                         <td>{new Date(order.createdAt).toLocaleString()}</td>
-                        <td>{renderStatusBadge(order.status, order.orderId)}</td>
+                        <td>{renderStatusBadge(order.status)}</td>
                         <td>
                           {renderApprovalBadge(order.orderId)}
                           {order.status === 'in_progress' && !invoiceData[order.orderId] && (
