@@ -1,6 +1,7 @@
 import {
     createCustomOrderRequest,
-    getCustomOrderRequests
+    getCustomOrderRequests,
+    getAllCustomOrders
 } from '../controllers/customOrderController.js';
 
 import express from 'express';
@@ -10,5 +11,6 @@ const CustomRouter = express.Router();
 
 CustomRouter.post('/', upload.single('designImage'), createCustomOrderRequest);
 CustomRouter.get('/', getCustomOrderRequests);
+CustomRouter.get('/all', getAllCustomOrders);
 
 export default CustomRouter;

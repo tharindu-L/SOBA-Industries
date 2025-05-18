@@ -69,7 +69,7 @@ const CashierDashboard = () => {
           />
         )}
          {activeSection === 'list' && (
-          <OrderList bills={existingBills} />
+          <CustomOrdersList /> // This will now show both standard and custom orders
         )}
          {activeSection === 'c-list' && (
           <CustomOrdersList bills={existingBills} />

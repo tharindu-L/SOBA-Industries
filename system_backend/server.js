@@ -803,6 +803,34 @@ app.get('/api/reports/sales/download', async (req, res) => {
   }
 });
 
+// Add endpoint for getting all custom orders
+app.get('/api/custom-orders/all', async (req, res) => {
+  try {
+    console.log('Fetching all custom orders');
+    const [orders] = await pool.query(
+      `SELECT 
+        request_id as requestId, 
+        customer_name as customerName,
+        description,
+        item_type as itemType,
+        design_image as designImage,
+        quantity,
+        CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
+        CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
+        status,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt
+      FROM custom_order_requests
+      ORDER BY created_at DESC`
+    );
+    
+    console.log(`Found ${orders.length} custom orders`);
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('Error fetching all custom orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching custom orders' });
+  }
+});
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {

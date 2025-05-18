@@ -124,53 +124,44 @@ export const getCustomOrderRequests = async (req, res) => {
     }
 };
 
-// The function that retrieves all custom orders needs to include the want_date field in its query
-
+// Get all custom orders from custom_order_requests table
 export const getAllCustomOrders = async (req, res) => {
   try {
     // Add some debug logging
-    console.log("Fetching all custom orders with want_date field");
+    console.log("Fetching all custom orders from custom_order_requests table");
     
-    // This query already includes want_date
     const [orders] = await pool.query(
       `SELECT 
-        co.order_id as orderId, 
-        co.customer_id as customerId, 
-        co.description, 
-        co.quantity, 
-        co.special_notes as specialNotes, 
-        co.status, 
-        co.created_at as createdAt,
-        co.category,
-        co.want_date as wantDate,
-        GROUP_CONCAT(cod.file_name) as designFiles
-      FROM custom_orders co
-      LEFT JOIN custom_order_designs cod ON co.order_id = cod.order_id
-      GROUP BY co.order_id
-      ORDER BY co.created_at DESC`
+        request_id as requestId, 
+        customer_name as customerName,
+        description,
+        item_type as itemType,
+        design_image as designImage,
+        quantity,
+        CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
+        CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
+        status,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt
+      FROM custom_order_requests
+      ORDER BY created_at DESC`
     );
 
     // Add debug logging to check what's coming back
-    console.log(`Retrieved ${orders.length} orders`);
+    console.log(`Retrieved ${orders.length} custom order requests`);
     if (orders.length > 0) {
-      console.log("Sample order data (first record):", 
+      console.log("Sample custom order data (first record):", 
         { 
-          orderId: orders[0].orderId,
-          wantDate: orders[0].wantDate,
-          desc: orders[0].description.substring(0, 20) + '...'
+          requestId: orders[0].requestId,
+          customerName: orders[0].customerName,
+          itemType: orders[0].itemType,
+          createdAt: orders[0].createdAt
         }
       );
     }
 
-    // Process the results to format design files as arrays
-    const formattedOrders = orders.map(order => ({
-      ...order,
-      designFiles: order.designFiles ? order.designFiles.split(',') : []
-    }));
-
     res.status(200).json({
       success: true,
-      orders: formattedOrders
+      orders: orders
     });
   } catch (err) {
     console.error("Error in getAllCustomOrders:", err);
