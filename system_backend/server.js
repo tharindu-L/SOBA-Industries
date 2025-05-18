@@ -412,10 +412,10 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
     
     console.log(`Generating downloadable ${format} inventory report for ${type}`);
     
-    // Fetch the appropriate data based on type - remove the date filter from query
+    // Fetch the appropriate data based on type
     let items = [];
     if (type === 'materials') {
-      // Remove the WHERE clause with updated_at
+      // Materials query is correct, no changes needed
       const [materials] = await pool.query(
         `SELECT 
           item_id as id, 
@@ -427,13 +427,13 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
       );
       items = materials;
     } else if (type === 'products') {
-      // Remove the WHERE clause with updated_at
+      // Fix the products query to use 'price' instead of 'unit_price'
       const [products] = await pool.query(
         `SELECT 
           product_id as id,
           name,
           stock as currentStock,
-          unit_price as unitPrice,
+          price as unitPrice,
           10 as minimumRequired
         FROM products`
       );
