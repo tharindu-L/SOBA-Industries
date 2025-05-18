@@ -11,6 +11,34 @@ const ITEM_PRICES = {
     souvenir: 20.00
 };
 
+// Function to get the next sequential custom order ID
+const getNextCustomOrderId = async (connection) => {
+    try {
+        // Get the highest current ID number
+        const [result] = await connection.query(`
+            SELECT request_id FROM custom_order_requests 
+            WHERE request_id LIKE 'CC%' 
+            ORDER BY CAST(SUBSTRING(request_id, 3) AS UNSIGNED) DESC 
+            LIMIT 1
+        `);
+        
+        let nextNumber = 1;
+        if (result.length > 0) {
+            // Extract the number part and increment
+            const currentId = result[0].request_id;
+            const currentNumber = parseInt(currentId.substring(2), 10);
+            nextNumber = currentNumber + 1;
+        }
+        
+        // Format with leading zeros (e.g., CC001)
+        return `CC${nextNumber.toString().padStart(3, '0')}`;
+    } catch (error) {
+        console.error('Error generating next custom order ID:', error);
+        // Fallback to the old format if there's an error
+        return `CUST-REQ-${uuidv4().substr(0, 8)}`;
+    }
+};
+
 // Create custom order request
 export const createCustomOrderRequest = async (req, res) => {
     console.log("Received custom order request:", req.body);
@@ -37,48 +65,51 @@ export const createCustomOrderRequest = async (req, res) => {
         });
     }
     
-    const requestId = `CUST-REQ-${uuidv4().substr(0, 8)}`;
-    
-    // Map from front-end item types to database enum values
-    const itemTypeMap = {
-        'Medals': 'medal',
-        'Badges': 'batch',
-        'Mugs': 'mug',
-        'Other': 'souvenir'
-    };
-    
-    const dbItemType = itemTypeMap[itemType] || 'souvenir';
-    
-    if (!ITEM_PRICES[dbItemType]) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid item type selected'
-        });
-    }
-
-    const unitPrice = ITEM_PRICES[dbItemType];
-    const calculatedTotalAmount = unitPrice * parseInt(quantity);
-    
-    // Use the provided total amount or calculate it
-    const totalAmount = reqTotalAmount ? parseFloat(reqTotalAmount) : calculatedTotalAmount;
-    
-    // Determine payment status and amount paid
-    const paymentStatus = paymentMethod === 'advance' ? 'partially_paid' : 'paid';
-    const amountPaid = reqAmountPaid ? parseFloat(reqAmountPaid) : 
-                      (paymentMethod === 'advance' ? totalAmount * 0.3 : totalAmount);
-
-    // Handle the design image
-    let designImage = null;
-    if (req.files && req.files.designImage && req.files.designImage[0]) {
-        designImage = `/uploads/custom-orders/${req.files.designImage[0].filename}`;
-    }
-
-    // Format want date for SQL
-    const formattedWantDate = wantDate ? new Date(wantDate).toISOString().split('T')[0] : null;
-
     let connection;
+    let requestId;
+    
     try {
         connection = await pool.getConnection();
+        // Get sequential ID instead of UUID
+        requestId = await getNextCustomOrderId(connection);
+        
+        // Map from front-end item types to database enum values
+        const itemTypeMap = {
+            'Medals': 'medal',
+            'Badges': 'batch',
+            'Mugs': 'mug',
+            'Other': 'souvenir'
+        };
+        
+        const dbItemType = itemTypeMap[itemType] || 'souvenir';
+        
+        if (!ITEM_PRICES[dbItemType]) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid item type selected'
+            });
+        }
+
+        const unitPrice = ITEM_PRICES[dbItemType];
+        const calculatedTotalAmount = unitPrice * parseInt(quantity);
+        
+        // Use the provided total amount or calculate it
+        const totalAmount = reqTotalAmount ? parseFloat(reqTotalAmount) : calculatedTotalAmount;
+        
+        // Determine payment status and amount paid
+        const paymentStatus = paymentMethod === 'advance' ? 'partially_paid' : 'paid';
+        const amountPaid = reqAmountPaid ? parseFloat(reqAmountPaid) : 
+                          (paymentMethod === 'advance' ? totalAmount * 0.3 : totalAmount);
+
+        // Handle the design image
+        let designImage = null;
+        if (req.files && req.files.designImage && req.files.designImage[0]) {
+            designImage = `/uploads/custom-orders/${req.files.designImage[0].filename}`;
+        }
+
+        // Format want date for SQL
+        const formattedWantDate = wantDate ? new Date(wantDate).toISOString().split('T')[0] : null;
+
         await connection.beginTransaction();
 
         // Log the query we're about to execute
