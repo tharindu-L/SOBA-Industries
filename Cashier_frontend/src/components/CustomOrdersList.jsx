@@ -1,29 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './OrderList.css';
+import './CustomOrdersList.css';
 
 const CustomOrdersList = () => {
     const [allOrders, setAllOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [remainingPayment, setRemainingPayment] = useState({});
+    const [processingPayment, setProcessingPayment] = useState(false);
 
     useEffect(() => {
-        fetchAllOrders();
+        fetchOrders();
     }, []);
 
-    const fetchAllOrders = async () => {
+    const fetchOrders = async () => {
         setLoading(true);
-        setError('');
-        
         try {
+            // Fetch custom orders
+            const customResponse = await axios.get('http://localhost:4000/api/custom-orders/all');
+            
             // Fetch standard orders
             const standardResponse = await axios.get('http://localhost:4000/api/bill/orders');
             
-            // Fetch custom orders from custom_order_requests table
-            const customResponse = await axios.get('http://localhost:4000/api/custom-orders/all');
-            
-            // Format custom orders to match standard order structure
+            // Format custom orders to ensure consistent structure
             const formattedCustomOrders = customResponse.data.orders.map(order => ({
                 id: order.requestId,
                 date: order.createdAt,
@@ -37,7 +37,15 @@ const CustomOrdersList = () => {
                 }],
                 status: order.status || 'pending',
                 description: order.description,
-                designImage: order.designImage
+                designImage: order.designImage,
+                // Add payment information
+                paymentMethod: order.paymentMethod || 'full',
+                totalAmount: parseFloat(order.totalAmount || 0),
+                amountPaid: parseFloat(order.amountPaid || 0),
+                paymentStatus: order.paymentStatus || (
+                    order.amountPaid >= order.totalAmount ? 'paid' : 
+                    order.amountPaid > 0 ? 'partially_paid' : 'pending'
+                )
             }));
             
             // Format standard orders to ensure consistent structure
@@ -48,7 +56,10 @@ const CustomOrdersList = () => {
                 total: order.totalAmount,
                 type: 'standard',
                 items: order.items,
-                status: order.payment_status || 'completed'
+                status: order.payment_status || 'completed',
+                paymentStatus: 'paid',
+                totalAmount: parseFloat(order.totalAmount),
+                amountPaid: parseFloat(order.totalAmount)
             }));
             
             // Combine both types of orders
@@ -65,6 +76,59 @@ const CustomOrdersList = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePaymentSubmit = async (orderId) => {
+        if (!remainingPayment[orderId]) {
+            alert('Please enter a valid payment amount');
+            return;
+        }
+
+        setProcessingPayment(true);
+        try {
+            const order = allOrders.find(o => o.id === orderId);
+            const paymentAmount = parseFloat(remainingPayment[orderId]);
+            const remainingTotal = order.totalAmount - order.amountPaid;
+
+            if (paymentAmount <= 0 || paymentAmount > remainingTotal) {
+                alert(`Please enter a valid amount between $0.01 and $${remainingTotal.toFixed(2)}`);
+                setProcessingPayment(false);
+                return;
+            }
+
+            // Make API call to update the payment
+            const response = await axios.post(
+                'http://localhost:4000/api/custom-orders/update-payment',
+                {
+                    orderId,
+                    paymentAmount
+                }
+            );
+
+            if (response.data.success) {
+                alert(`Payment of $${paymentAmount.toFixed(2)} successfully processed.`);
+                // Refresh orders list
+                fetchOrders();
+                // Clear payment input
+                setRemainingPayment(prev => ({
+                    ...prev,
+                    [orderId]: ''
+                }));
+            } else {
+                alert(response.data.message || 'Failed to process payment');
+            }
+        } catch (err) {
+            console.error('Error processing payment:', err);
+            alert('Error processing payment. Please try again.');
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
+    const calculateRemaining = (order) => {
+        const total = parseFloat(order.totalAmount || 0);
+        const paid = parseFloat(order.amountPaid || 0);
+        return (total - paid).toFixed(2);
     };
 
     const filterOrders = (type) => {
@@ -110,13 +174,14 @@ const CustomOrdersList = () => {
                             <th>Type</th>
                             <th>Items</th>
                             <th>Total (LKR)</th>
-                            <th>Status</th>
+                            <th>Payment Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filterOrders(activeTab).length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="no-orders">No orders found</td>
+                                <td colSpan="8" className="no-orders">No orders found</td>
                             </tr>
                         ) : (
                             filterOrders(activeTab).map((order) => (
@@ -151,11 +216,43 @@ const CustomOrdersList = () => {
                                             </div>
                                         )}
                                     </td>
-                                    <td>{parseFloat(order.total).toFixed(2)}</td>
+                                    <td>{parseFloat(order.totalAmount || order.total).toFixed(2)}</td>
                                     <td>
-                                        <span className={`status ${order.status.toLowerCase()}`}>
-                                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                        <span className={`payment-status ${(order.paymentStatus || '').toLowerCase()}`}>
+                                            {order.paymentStatus === 'paid' ? 'Paid in Full' : 
+                                             order.paymentStatus === 'partially_paid' ? '30% Advance Paid' : 
+                                             'Payment Pending'}
                                         </span>
+                                        {order.paymentStatus === 'partially_paid' && (
+                                            <div className="remaining-amount">
+                                                <small>Remaining: ${calculateRemaining(order)}</small>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {order.type === 'custom' && order.paymentStatus === 'partially_paid' && (
+                                            <div className="payment-action">
+                                                <input
+                                                    type="number"
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    placeholder="Amount"
+                                                    value={remainingPayment[order.id] || ''}
+                                                    onChange={(e) => setRemainingPayment({
+                                                        ...remainingPayment,
+                                                        [order.id]: e.target.value
+                                                    })}
+                                                    disabled={processingPayment}
+                                                />
+                                                <button
+                                                    onClick={() => handlePaymentSubmit(order.id)}
+                                                    disabled={processingPayment}
+                                                    className="complete-payment-btn"
+                                                >
+                                                    {processingPayment ? 'Processing...' : 'Complete Payment'}
+                                                </button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))

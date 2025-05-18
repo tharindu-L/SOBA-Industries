@@ -16,7 +16,18 @@ export const createCustomOrderRequest = async (req, res) => {
     console.log("Received custom order request:", req.body);
     console.log("Files received:", req.files);
     
-    const { customerName, description, itemType, quantity, specialNotes, wantDate } = req.body;
+    const { 
+        customerName, 
+        description, 
+        itemType, 
+        quantity, 
+        specialNotes, 
+        wantDate,
+        // Add payment information - change variable name to match field
+        paymentMethod, // We'll still use this variable name in our code
+        totalAmount: reqTotalAmount,
+        amountPaid: reqAmountPaid
+    } = req.body;
     
     // Validate required fields
     if (!customerName || !description || !itemType || !quantity) {
@@ -46,7 +57,15 @@ export const createCustomOrderRequest = async (req, res) => {
     }
 
     const unitPrice = ITEM_PRICES[dbItemType];
-    const totalAmount = unitPrice * parseInt(quantity);
+    const calculatedTotalAmount = unitPrice * parseInt(quantity);
+    
+    // Use the provided total amount or calculate it
+    const totalAmount = reqTotalAmount ? parseFloat(reqTotalAmount) : calculatedTotalAmount;
+    
+    // Determine payment status and amount paid
+    const paymentStatus = paymentMethod === 'advance' ? 'partially_paid' : 'paid';
+    const amountPaid = reqAmountPaid ? parseFloat(reqAmountPaid) : 
+                      (paymentMethod === 'advance' ? totalAmount * 0.3 : totalAmount);
 
     // Handle the design image
     let designImage = null;
@@ -66,19 +85,22 @@ export const createCustomOrderRequest = async (req, res) => {
         console.log(`Inserting custom order request with values:`, {
             requestId, customerName, description, dbItemType,
             designImage, quantity, unitPrice, totalAmount,
-            specialNotes, formattedWantDate
+            specialNotes, formattedWantDate,
+            paymentMethod, paymentStatus, amountPaid
         });
 
+        // Update the column names to match the database schema
         await connection.query(
             `INSERT INTO custom_order_requests (
                 request_id, customer_name, description, item_type, 
                 design_image, quantity, unit_price, total_amount,
-                special_notes, want_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                special_notes, want_date, payment_option, payment_status, amount_paid
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 requestId, customerName, description, dbItemType,
                 designImage, quantity, unitPrice, totalAmount,
-                specialNotes || null, formattedWantDate
+                specialNotes || null, formattedWantDate,
+                paymentMethod || 'full', paymentStatus, amountPaid
             ]
         );
 
@@ -115,7 +137,10 @@ export const createCustomOrderRequest = async (req, res) => {
                 specialNotes,
                 wantDate: formattedWantDate,
                 designFiles,
-                status: 'pending'
+                status: 'pending',
+                paymentOption: paymentMethod || 'full', // Update variable name here too
+                paymentStatus,
+                amountPaid
             }
         });
     } catch (error) {
@@ -150,12 +175,13 @@ export const createCustomOrderRequest = async (req, res) => {
     }
 };
 
-// Get all custom order requests
+// Get all custom order requests with payment information
 export const getCustomOrderRequests = async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();
         
+        // Update SQL query to use payment_option instead of payment_method
         const [requests] = await connection.query(`
             SELECT 
                 request_id as requestId,
@@ -169,7 +195,10 @@ export const getCustomOrderRequests = async (req, res) => {
                 status,
                 DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
                 DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
-                special_notes as specialNotes
+                special_notes as specialNotes,
+                payment_option as paymentMethod,
+                payment_status as paymentStatus,
+                CAST(amount_paid AS DECIMAL(10,2)) as amountPaid
             FROM custom_order_requests
             ORDER BY created_at DESC
         `);
@@ -191,12 +220,13 @@ export const getCustomOrderRequests = async (req, res) => {
     }
 };
 
-// Get all custom orders from custom_order_requests table
+// Get all custom orders from custom_order_requests table with payment information
 export const getAllCustomOrders = async (req, res) => {
   try {
     // Add some debug logging
     console.log("Fetching all custom orders from custom_order_requests table");
     
+    // Update the SQL query to fetch payment_option instead of payment_method
     const [orders] = await pool.query(
       `SELECT 
         request_id as requestId, 
@@ -210,7 +240,10 @@ export const getAllCustomOrders = async (req, res) => {
         status,
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
         DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
-        special_notes as specialNotes
+        special_notes as specialNotes,
+        payment_option as paymentMethod,
+        payment_status as paymentStatus,
+        CAST(amount_paid AS DECIMAL(10,2)) as amountPaid
       FROM custom_order_requests
       ORDER BY created_at DESC`
     );
@@ -224,7 +257,10 @@ export const getAllCustomOrders = async (req, res) => {
           customerName: orders[0].customerName,
           itemType: orders[0].itemType,
           createdAt: orders[0].createdAt,
-          wantDate: orders[0].wantDate
+          wantDate: orders[0].wantDate,
+          paymentMethod: orders[0].paymentMethod,
+          paymentStatus: orders[0].paymentStatus,
+          amountPaid: orders[0].amountPaid
         }
       );
     }
@@ -236,6 +272,85 @@ export const getAllCustomOrders = async (req, res) => {
   } catch (err) {
     console.error("Error in getAllCustomOrders:", err);
     res.status(500).json({ success: false, message: "Error fetching custom orders" });
+  }
+};
+
+// Add endpoint to update the payment for an order
+export const updateOrderPayment = async (req, res) => {
+  const { orderId, paymentAmount } = req.body;
+  
+  if (!orderId || !paymentAmount || isNaN(paymentAmount) || paymentAmount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid payment information'
+    });
+  }
+
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Get current order information
+    const [orderResult] = await connection.query(
+      'SELECT * FROM custom_order_requests WHERE request_id = ?',
+      [orderId]
+    );
+
+    if (orderResult.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    const order = orderResult[0];
+    const currentAmountPaid = parseFloat(order.amount_paid || 0);
+    const totalAmount = parseFloat(order.total_amount);
+    const newAmountPaid = currentAmountPaid + parseFloat(paymentAmount);
+
+    // Validate that we're not overpaying
+    if (newAmountPaid > totalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount would exceed the total. Maximum additional payment: ${(totalAmount - currentAmountPaid).toFixed(2)}`
+      });
+    }
+
+    // Update order with new payment amount and status
+    const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partially_paid';
+    
+    await connection.query(
+      `UPDATE custom_order_requests 
+       SET amount_paid = ?, payment_status = ? 
+       WHERE request_id = ?`,
+      [newAmountPaid, newStatus, orderId]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Payment updated successfully',
+      order: {
+        orderId,
+        totalAmount,
+        previouslyPaid: currentAmountPaid,
+        newPayment: parseFloat(paymentAmount),
+        totalPaid: newAmountPaid,
+        newStatus
+      }
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('Error updating payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update payment',
+      error: error.message
+    });
+  } finally {
+    if (connection) connection.release();
   }
 };
 

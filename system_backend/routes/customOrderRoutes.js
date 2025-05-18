@@ -1,7 +1,8 @@
 import {
     createCustomOrderRequest,
     getCustomOrderRequests,
-    getAllCustomOrders
+    getAllCustomOrders,
+    updateOrderPayment
 } from '../controllers/customOrderController.js';
 
 import express from 'express';
@@ -25,5 +26,8 @@ CustomRouter.post('/test', (req, res) => {
 
 CustomRouter.get('/', getCustomOrderRequests);
 CustomRouter.get('/all', getAllCustomOrders);
+
+// Add endpoint for updating payments
+CustomRouter.post('/update-payment', updateOrderPayment);
 
 export default CustomRouter;

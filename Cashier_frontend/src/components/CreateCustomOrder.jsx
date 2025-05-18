@@ -21,6 +21,11 @@ const CreateCustomOrder = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [designFiles, setDesignFiles] = useState([]);
+    // Add payment related states
+    const [paymentMethod, setPaymentMethod] = useState('full');
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [amountToPay, setAmountToPay] = useState(0);
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
 
     // Get tomorrow's date for the minimum date in the date picker
     const tomorrow = new Date();
@@ -34,12 +39,35 @@ const CreateCustomOrder = () => {
         { value: 'Other', label: 'Other' }
     ];
 
+    // Price mapping for item types
+    const itemPrices = {
+        'Medals': 15.00,
+        'Badges': 10.00,
+        'Mugs': 8.00,
+        'Other': 20.00
+    };
+
+    // Calculate total and payment amount when quantity or item type changes
+    React.useEffect(() => {
+        const price = itemPrices[formData.itemType] || 0;
+        const total = price * formData.quantity;
+        setTotalAmount(total);
+        
+        // Calculate amount to pay based on payment method
+        const amount = paymentMethod === 'advance' ? total * 0.3 : total;
+        setAmountToPay(amount);
+    }, [formData.itemType, formData.quantity, paymentMethod]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
+    };
+
+    const handlePaymentMethodChange = (e) => {
+        setPaymentMethod(e.target.value);
     };
 
     const handleImageChange = (e) => {
@@ -67,10 +95,12 @@ const CreateCustomOrder = () => {
         e.preventDefault();
         setError('');
         setIsSubmitting(true);
+        setPaymentProcessing(true);
 
         if (!formData.wantDate) {
             setError('Required by date is required');
             setIsSubmitting(false);
+            setPaymentProcessing(false);
             return;
         }
 
@@ -83,6 +113,10 @@ const CreateCustomOrder = () => {
             formPayload.append('quantity', formData.quantity);
             formPayload.append('specialNotes', formData.specialNotes || '');
             formPayload.append('wantDate', formData.wantDate);
+            // Add payment information
+            formPayload.append('paymentMethod', paymentMethod);
+            formPayload.append('totalAmount', totalAmount.toFixed(2));
+            formPayload.append('amountPaid', amountToPay.toFixed(2));
             
             // Add design image if present
             if (formData.designImage) {
@@ -103,6 +137,9 @@ const CreateCustomOrder = () => {
                 quantity: formData.quantity,
                 specialNotes: formData.specialNotes,
                 wantDate: formData.wantDate,
+                paymentMethod: paymentMethod,
+                totalAmount: totalAmount.toFixed(2),
+                amountPaid: amountToPay.toFixed(2),
                 hasDesignImage: !!formData.designImage,
                 designFilesCount: designFiles.length
             });
@@ -121,7 +158,7 @@ const CreateCustomOrder = () => {
             console.log('API response:', response.data);
 
             if (response.data.success) {
-                alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}`);
+                alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}\nPayment: $${amountToPay.toFixed(2)} (${paymentMethod === 'advance' ? '30% Advance' : 'Full Payment'})`);
                 navigate('/cashier-dashboard');
             } else {
                 setError(response.data.message || 'Failed to create order request');
@@ -131,6 +168,7 @@ const CreateCustomOrder = () => {
             setError(err.response?.data?.message || 'Failed to create order request. Please try again.');
         } finally {
             setIsSubmitting(false);
+            setPaymentProcessing(false);
         }
     };
 
@@ -243,6 +281,57 @@ const CreateCustomOrder = () => {
                     </small>
                 </div>
 
+                {/* Add Payment Section */}
+                <div className="form-section">
+                    <h3>Payment Information</h3>
+                    
+                    <div className="form-group">
+                        <label>Payment Method *</label>
+                        <div className="payment-options">
+                            <div className="payment-option">
+                                <input
+                                    type="radio"
+                                    id="full-payment"
+                                    name="paymentMethod"
+                                    value="full"
+                                    checked={paymentMethod === 'full'}
+                                    onChange={handlePaymentMethodChange}
+                                />
+                                <label htmlFor="full-payment">Full Payment</label>
+                            </div>
+                            
+                            <div className="payment-option">
+                                <input
+                                    type="radio"
+                                    id="advance-payment"
+                                    name="paymentMethod"
+                                    value="advance"
+                                    checked={paymentMethod === 'advance'}
+                                    onChange={handlePaymentMethodChange}
+                                />
+                                <label htmlFor="advance-payment">30% Advance Payment</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="form-group payment-summary">
+                        <div className="summary-item">
+                            <span>Total Amount:</span>
+                            <span>${totalAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="summary-item highlight">
+                            <span>Amount to Pay Now:</span>
+                            <span>${amountToPay.toFixed(2)}</span>
+                        </div>
+                        {paymentMethod === 'advance' && (
+                            <div className="summary-item remaining">
+                                <span>Remaining (Due Later):</span>
+                                <span>${(totalAmount - amountToPay).toFixed(2)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="form-actions">
                     <button
                         type="button"
@@ -254,15 +343,15 @@ const CreateCustomOrder = () => {
                     <button
                         type="submit"
                         className="submit-btn"
-                        onClick={() => navigate('/cashier-dashboard')}
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? (
                             <>
-                                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> Submitting...
+                                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> 
+                                {paymentProcessing ? 'Processing Payment...' : 'Submitting...'}
                             </>
                         ) : (
-                            'Submit Request'
+                            `Submit & Pay ${paymentMethod === 'advance' ? '30% Advance' : 'Full Amount'}`
                         )}
                     </button>
                 </div>
