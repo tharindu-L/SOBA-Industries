@@ -74,33 +74,58 @@ const OrderManagement = () => {
 
     try {
       setUpdating(true);
-      const response = await fetch('http://localhost:4000/api/order/all_order_update', {
+      setError(null); // Clear any previous errors
+      
+      // Create the request body with multiple formats to handle different API expectations
+      const requestBody = JSON.stringify({
+        orderId: currentOrder.order_id,
+        status: newStatus,
+        // Include alternative property names that the API might expect
+        order_id: currentOrder.order_id,
+        new_status: newStatus
+      });
+      
+      // Try the correct endpoint
+      const endpoint = 'http://localhost:4000/api/order/all_order_update'; // Using the original endpoint name
+      
+      console.log(`Trying to update order status at ${endpoint} with:`, JSON.parse(requestBody));
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          order_id: currentOrder.order_id,
-          new_status: newStatus
-        }),
+        body: requestBody,
       });
 
+      // Handle the response
       if (!response.ok) {
-        throw new Error('Failed to update order status');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update order status');
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON error response:', textResponse);
+          throw new Error(`Server error (${response.status}): Please check the server logs`);
+        }
       }
 
-      const result = await response.json();
+      // Update the local state with the new status
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.order_id === currentOrder.order_id 
+            ? { ...order, current_status: newStatus } 
+            : order
+        )
+      );
       
-      // Update local state
-      setOrders(orders.map(order => 
-        order.order_id === currentOrder.order_id 
-          ? { ...order, current_status: newStatus } 
-          : order
-      ));
-
+      // Show success message or feedback
+      alert(`Order #${currentOrder.order_id} status updated to ${newStatus}`);
       setShowModal(false);
     } catch (err) {
-      setError(err.message);
+      console.error('Error updating order status:', err);
+      setError(`Failed to update order status: ${err.message}`);
     } finally {
       setUpdating(false);
     }
@@ -410,5 +435,4 @@ const OrderManagement = () => {
     </div>
   );
 };
-
 export default OrderManagement;
