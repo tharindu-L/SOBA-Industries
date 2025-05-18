@@ -51,7 +51,6 @@ const AdminQuotations = () => {
   const [invoiceData, setInvoiceData] = useState({});
   const [refreshInterval, setRefreshInterval] = useState(null);
 
-  // Enhanced fetchOrders function to fetch from both sources
   const fetchOrders = async () => {
     setIsLoading(true);
     setError(null);
@@ -64,68 +63,15 @@ const AdminQuotations = () => {
         }
       });
       
-      let allOrders = [];
-      
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
           console.log("Custom orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
-          allOrders = data.orders || [];
-          
-          // Mark these as customer-placed orders
-          allOrders = allOrders.map(order => ({
-            ...order,
-            source: 'customer'
-          }));
+          setOrders(data.orders || []);
         }
       } else {
         console.error("Failed to fetch customer custom orders:", response.status);
       }
-      
-      // Now fetch cashier-placed custom order requests
-      try {
-        const cashierOrdersResponse = await fetch('http://localhost:4000/api/custom-orders/all', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Cache-Control': 'no-cache'
-          }
-        });
-        
-        if (cashierOrdersResponse.ok) {
-          const cashierOrdersData = await cashierOrdersResponse.json();
-          
-          if (cashierOrdersData.success && cashierOrdersData.orders) {
-            console.log("Cashier-placed custom orders received:", cashierOrdersData.orders.slice(0, 2));
-            
-            // Transform cashier-placed custom orders to match the existing order format
-            const transformedCashierOrders = cashierOrdersData.orders.map(request => ({
-              orderId: request.requestId,
-              customerId: request.customerName,
-              description: request.description,
-              category: request.itemType,
-              quantity: request.quantity,
-              wantDate: request.wantDate || null,
-              designFiles: request.designImage ? [request.designImage] : [],
-              createdAt: request.createdAt,
-              status: mapCustomOrderStatus(request.status),
-              special_notes: request.specialNotes,
-              source: 'cashier', // Add a source identifier
-              unitPrice: request.unitPrice,
-              totalAmount: request.totalAmount
-            }));
-            
-            // Combine both sets of orders
-            allOrders = [...allOrders, ...transformedCashierOrders];
-          }
-        }
-      } catch (cashierOrdersError) {
-        console.error("Error fetching cashier-placed custom orders:", cashierOrdersError);
-        // Continue without cashier orders if there's an error
-      }
-      
-      // Update state with combined orders
-      console.log("Total custom orders to display:", allOrders.length);
-      setOrders(allOrders);
       
       // Fetch invoices for these orders to get customer approval status
       await fetchInvoicesForOrders();
@@ -137,17 +83,7 @@ const AdminQuotations = () => {
     }
   };
 
-  // Helper function to map custom order status to regular order status
-  const mapCustomOrderStatus = (customStatus) => {
-    switch (customStatus) {
-      case 'approved': return 'in_progress';
-      case 'completed': return 'completed';
-      case 'rejected': return 'cancelled';
-      default: return 'pending';
-    }
-  };
-
-  // Enhanced and fixed fetchInvoicesForOrders function
+  // Fetch invoices for orders
   const fetchInvoicesForOrders = async () => {
     try {
       console.log("Fetching invoice data...");
@@ -199,7 +135,7 @@ const AdminQuotations = () => {
     console.log("Component mounted - fetching initial data");
     fetchOrders();
     
-    // Set up an interval to refresh data every 10 seconds (reduced from 15 to see changes faster)
+    // Set up an interval to refresh data every 10 seconds
     const interval = setInterval(() => {
       console.log("Auto-refresh triggered");
       fetchInvoicesForOrders(); // Only refresh invoice data to reduce load
@@ -214,95 +150,95 @@ const AdminQuotations = () => {
     };
   }, []); // Empty dependency array ensures this only runs once on mount
 
-  // Enhance the fetchMaterials function with better error handling and retry capability
-const fetchMaterials = async (retryCount = 0) => {
-  setError(null);
-  try {
-    console.log('Fetching materials...');
-    
-    // Try multiple endpoints to get materials (for redundancy)
-    const endpoints = [
-      'http://localhost:4000/api/material/get_all', 
-      'http://localhost:4000/api/supervisors/materials',
-      'http://localhost:4000/api/material/get'
-    ];
-    
-    let response = null;
-    let data = null;
-    let success = false;
-    
-    // Try each endpoint until one succeeds
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying endpoint: ${endpoint}`);
-        response = await fetch(endpoint, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-store'
-        });
-        
-        if (response.ok) {
-          data = await response.json();
-          if (data.success && data.materials && data.materials.length > 0) {
-            console.log(`Successfully fetched ${data.materials.length} materials from ${endpoint}`);
-            success = true;
-            break;
-          }
-        }
-      } catch (endpointError) {
-        console.warn(`Error with endpoint ${endpoint}:`, endpointError);
-      }
-    }
-    
-    if (success) {
-      console.log('Material data:', data.materials.slice(0, 2)); // Log first two materials for debugging
-      setMaterials(data.materials);
+  // Fetch materials function with better error handling and retry capability
+  const fetchMaterials = async (retryCount = 0) => {
+    setError(null);
+    try {
+      console.log('Fetching materials...');
       
-      // Initialize with the first material
-      if (data.materials.length > 0) {
-        setMaterialItems([
-          {
-            material_name: data.materials[0].item_name,
-            quantity: 1,
-            unit_price: parseFloat(data.materials[0].unit_price),
-            material_id: data.materials[0].item_id,
-            available_qty: data.materials[0].available_qty
+      // Try multiple endpoints to get materials (for redundancy)
+      const endpoints = [
+        'http://localhost:4000/api/material/get_all', 
+        'http://localhost:4000/api/supervisors/materials',
+        'http://localhost:4000/api/material/get'
+      ];
+      
+      let response = null;
+      let data = null;
+      let success = false;
+      
+      // Try each endpoint until one succeeds
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          response = await fetch(endpoint, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-store'
+          });
+          
+          if (response.ok) {
+            data = await response.json();
+            if (data.success && data.materials && data.materials.length > 0) {
+              console.log(`Successfully fetched ${data.materials.length} materials from ${endpoint}`);
+              success = true;
+              break;
+            }
           }
-        ]);
-      } else {
-        setMaterialItems([]);
+        } catch (endpointError) {
+          console.warn(`Error with endpoint ${endpoint}:`, endpointError);
+        }
       }
-    } else if (retryCount < 3) {
-      // Retry up to 3 times with exponential backoff
-      console.log(`Retrying fetchMaterials (attempt ${retryCount + 1})...`);
-      setTimeout(() => {
-        fetchMaterials(retryCount + 1);
-      }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s backoff
-    } else {
-      throw new Error('Failed to fetch materials from any endpoint');
+      
+      if (success) {
+        console.log('Material data:', data.materials.slice(0, 2)); // Log first two materials for debugging
+        setMaterials(data.materials);
+        
+        // Initialize with the first material
+        if (data.materials.length > 0) {
+          setMaterialItems([
+            {
+              material_name: data.materials[0].item_name,
+              quantity: 1,
+              unit_price: parseFloat(data.materials[0].unit_price),
+              material_id: data.materials[0].item_id,
+              available_qty: data.materials[0].available_qty
+            }
+          ]);
+        } else {
+          setMaterialItems([]);
+        }
+      } else if (retryCount < 3) {
+        // Retry up to 3 times with exponential backoff
+        console.log(`Retrying fetchMaterials (attempt ${retryCount + 1})...`);
+        setTimeout(() => {
+          fetchMaterials(retryCount + 1);
+        }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s backoff
+      } else {
+        throw new Error('Failed to fetch materials from any endpoint');
+      }
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+      setError('Failed to fetch materials. Please try again later.');
     }
-  } catch (error) {
-    console.error('Error fetching materials:', error);
-    setError('Failed to fetch materials. Please try again later.');
-  }
-};
+  };
 
-  // Enhance the handleUpdateClick function to ensure materials are loaded
-const handleUpdateClick = (order) => {
-  setCurrentOrder(order);
-  setStatus(order.status || 'pending');
-  setServiceCharge(0); // Reset service charge when opening modal
-  setMaterialItems([]); // Reset material items
-  setStockErrors({});
-  setError(null);
-  setShowModal(true);
-  
-  // Always fetch materials regardless of status
-  fetchMaterials();
-};
+  // Handle update button click
+  const handleUpdateClick = (order) => {
+    setCurrentOrder(order);
+    setStatus(order.status || 'pending');
+    setServiceCharge(0); // Reset service charge when opening modal
+    setMaterialItems([]); // Reset material items
+    setStockErrors({});
+    setError(null);
+    setShowModal(true);
+    
+    // Always fetch materials regardless of status
+    fetchMaterials();
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -405,37 +341,15 @@ const handleUpdateClick = (order) => {
     setError(null);
 
     try {
-      // Determine endpoint and request body based on order source
-      let endpoint, requestBody;
-      
-      // For cashier-placed custom orders
-      if (currentOrder.source === 'cashier') {
-        endpoint = 'http://localhost:4000/api/order/status';
-        requestBody = {
-          orderId: currentOrder.orderId,
-          status: mapRegularToCustomStatus(status)
-        };
-      }
-      // For customer-placed custom orders
-      else if (currentOrder.source === 'custom_request') {
-        endpoint = 'http://localhost:4000/api/custom_order/update_status';
-        requestBody = {
-          requestId: currentOrder.orderId,
-          status: mapRegularToCustomStatus(status)
-        };
-      } 
-      // For regular customer orders
-      else {
-        endpoint = 'http://localhost:4000/api/order/status';
-        requestBody = {
-          orderId: currentOrder.orderId,
-          status
-        };
-      }
+      const endpoint = 'http://localhost:4000/api/order/status';
+      const requestBody = {
+        orderId: currentOrder.orderId,
+        status
+      };
 
-      console.log(`Updating order with source ${currentOrder.source}:`, requestBody);
+      console.log("Updating order:", requestBody);
 
-      // Update the order status
+      // Update order status
       const statusResponse = await fetch(endpoint, {
         method: 'PUT',
         headers: { 
@@ -445,12 +359,15 @@ const handleUpdateClick = (order) => {
         body: JSON.stringify(requestBody),
       });
 
+      console.log(`Status response code: ${statusResponse.status}`);
+      const responseText = await statusResponse.text();
+      console.log(`Response text: ${responseText}`);
+      
+      const statusData = responseText ? JSON.parse(responseText) : {};
       if (!statusResponse.ok) {
-        const errorText = await statusResponse.text();
-        throw new Error(`HTTP error! Status: ${statusResponse.status}. Details: ${errorText}`);
+        throw new Error(`HTTP error! Status: ${statusResponse.status}. Details: ${responseText}`);
       }
 
-      const statusData = await statusResponse.json();
       if (!statusData.success) {
         throw new Error(statusData.message || 'Failed to update order status');
       }
@@ -501,29 +418,45 @@ const handleUpdateClick = (order) => {
         await reduceMaterialStock(materialItems);
       }
 
-      // Show success message and refresh orders
-      setSuccessMessage(`Order #${currentOrder.orderId} has been successfully ${status === 'in_progress' ? 'approved' : status}`);
-      await fetchOrders();
-      handleCloseModal();
-      
-      // Clear success message after a few seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
-      
+      // After successful status update
+      if (statusResponse.ok) {
+        // Clear isSubmitting state first
+        setIsSubmitting(false);
+        
+        // Update the local orders state immediately with the new status
+        const updatedOrders = orders.map(order => {
+          if (order.orderId === currentOrder.orderId) {
+            console.log(`Updating order ${order.orderId} status from ${order.status} to ${status}`);
+            
+            return {
+              ...order,
+              status: status
+            };
+          }
+          return order;
+        });
+        
+        // Set the updated orders in state to trigger UI refresh
+        setOrders(updatedOrders);
+        
+        // Show success message
+        setSuccessMessage(`Order #${currentOrder.orderId} has been successfully ${status === 'in_progress' ? 'approved' : status}`);
+        
+        // Close modal before further processing
+        handleCloseModal();
+        
+        // Fetch invoices in the background
+        fetchInvoicesForOrders();
+        
+        // Clear success message after a delay
+        setTimeout(() => setSuccessMessage(null), 5000);
+      }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       setError(error.message || 'An error occurred during submission. Please try again.');
     } finally {
+      // Make sure isSubmitting is false in all cases
       setIsSubmitting(false);
-    }
-  };
-
-  // Helper function to map regular order status to custom order status
-  const mapRegularToCustomStatus = (regularStatus) => {
-    switch (regularStatus) {
-      case 'in_progress': return 'approved';
-      case 'completed': return 'completed';
-      case 'cancelled': return 'rejected';
-      default: return 'pending';
     }
   };
 
@@ -569,7 +502,6 @@ const handleUpdateClick = (order) => {
         }
       });
 
-      // Fix: Add the missing await Promise.all
       await Promise.all(updateRequests);
     } catch (error) {
       console.error('Error reducing material stock:', error);
@@ -679,41 +611,39 @@ const handleUpdateClick = (order) => {
     }
   };
 
-  // Status badge renderer - modified to only show order status, not approval status
-const renderStatusBadge = (status) => {
-  switch (status) {
-    case 'completed':
-      return (
-        <Badge bg="success">
-          <FileEarmarkCheck className="me-1" /> Completed
-        </Badge>
-      );
-    case 'cancelled':
-      return (
-        <Badge bg="danger">
-          <XCircle className="me-1" /> Cancelled
-        </Badge>
-      );
-    case 'in_progress':
-      return (
-        <Badge bg="primary">
-          <Clock className="me-1" /> Approved
-        </Badge>
-      );
-    default:
-      return (
-        <Badge bg="warning" text="dark">
-          <Clock className="me-1" /> Pending
-        </Badge>
-      );
-  }
-};
+  // Status badge renderer
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Badge bg="success">
+            <FileEarmarkCheck className="me-1" /> Completed
+          </Badge>
+        );
+      case 'cancelled':
+        return (
+          <Badge bg="danger">
+            <XCircle className="me-1" /> Cancelled
+          </Badge>
+        );
+      case 'in_progress':
+        return (
+          <Badge bg="primary">
+            <Clock className="me-1" /> Approved
+          </Badge>
+        );
+      default:
+        return (
+          <Badge bg="warning" text="dark">
+            <Clock className="me-1" /> Pending
+          </Badge>
+        );
+    }
+  };
 
-  // Update renderApprovalBadge to improve debugging
+  // Render customer approval badge
   const renderApprovalBadge = (orderId) => {
     const invoiceInfo = invoiceData[orderId];
-    
-    console.log(`Rendering approval badge for order ${orderId}:`, invoiceInfo);
     
     if (!invoiceInfo || !invoiceInfo.approvalStatus) {
       return (
@@ -747,12 +677,12 @@ const renderStatusBadge = (status) => {
     }
   };
 
-  // Add a manual refresh button for invoice approvals
+  // Manual refresh for invoice approvals
   const handleRefreshApprovals = () => {
     fetchInvoicesForOrders();
   };
 
-  // Add this helper function to render descriptions
+  // Render description with tooltip
   const renderDescription = (description, special_notes) => {
     let fullText = description || '';
     
@@ -841,9 +771,7 @@ const renderStatusBadge = (status) => {
               </div>
             </Col>
             <Col md={6} className="text-end">
-              <Badge bg="info" className="me-2">Total Jobs: {sortedOrders.length}</Badge>
-              <Badge bg="primary" className="me-2">Customer Orders: {sortedOrders.filter(order => order.source === 'customer').length}</Badge>
-              <Badge bg="secondary">Cashier Orders: {sortedOrders.filter(order => order.source !== 'customer').length}</Badge>
+              <Badge bg="info">Total Jobs: {sortedOrders.length}</Badge>
             </Col>
           </Row>
 
@@ -898,15 +826,10 @@ const renderStatusBadge = (status) => {
                 <tbody>
                   {sortedOrders.length > 0 ? (
                     sortedOrders.map((order) => (
-                      <tr key={`${order.source}-${order.orderId}`}>
+                      <tr key={order.orderId}>
                         <td>{order.orderId}</td>
                         <td>{order.customerId}</td>
-                        <td>
-                          {order.category || 'Not specified'}
-                          {order.source !== 'customer' && (
-                            <Badge bg="warning" text="dark" className="ms-2">Cashier</Badge>
-                          )}
-                        </td>
+                        <td>{order.category || 'Not specified'}</td>
                         <td>{renderDescription(order.description, order.special_notes)}</td>
                         <td>{order.quantity}</td>
                         <td>
@@ -960,7 +883,7 @@ const renderStatusBadge = (status) => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="11" className="text-center py-4"> {/* Update colspan to match new column count */}
+                      <td colSpan="11" className="text-center py-4">
                         {searchTerm 
                           ? "No orders match your search criteria" 
                           : "No orders available"}
