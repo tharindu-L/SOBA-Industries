@@ -104,7 +104,9 @@ const AddMaterial = () => {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: 'calc(100vh - 80px)'
+      minHeight: 'calc(100vh - 80px)',
+      marginLeft: '85px',
+      marginTop:'-25px'
     }}>
       <Paper elevation={3} className="add-tour-container">
         <Typography
