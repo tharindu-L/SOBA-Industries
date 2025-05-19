@@ -6,6 +6,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { assest } from '../../assest/assest';
+// Import the Navlogo2 image
+import Navlogo3 from './Navlogo3.png';  // Update this import to use Navlogo2
 import axios from 'axios';
 
 const CustomNavbar = ({ isHomePage }) => {
@@ -157,10 +159,8 @@ const CustomNavbar = ({ isHomePage }) => {
         <Container fluid>
           <Navbar.Brand as={Link} to="/">
             <img
-              src={assest.expo}
-              width="120"
-              height="40"
-              alt="Logo"
+              src={Navlogo3}
+              alt="SOBA Industries Logo"
               className="brand-logo"
             />
           </Navbar.Brand>
@@ -169,9 +169,8 @@ const CustomNavbar = ({ isHomePage }) => {
           <Navbar.Collapse id="basic-navbar-nav" in={isMenuOpen}>
             <Nav className="mx-auto custom-nav">
               <Nav.Link onClick={() => handleLinkClick('#home')}>Home</Nav.Link>
-              <Nav.Link onClick={() => handleLinkClick('#services')}>Services</Nav.Link>
               <Nav.Link onClick={() => handleLinkClick('#footer')}>Contact</Nav.Link>
-              <Nav.Link onClick={() => handleLinkClick('#about')}>About</Nav.Link>
+              <Nav.Link onClick={() => handleLinkClick('#footer')}>About</Nav.Link>
             </Nav>
 
             {!isAuthenticated && (
