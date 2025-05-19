@@ -5,6 +5,7 @@ import {
   Avatar,
   Badge,
   Box,
+  Chip,
   Collapse,
   Divider,
   Drawer,
@@ -24,9 +25,11 @@ import React, { useEffect, useState } from 'react';
 
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import InfoIcon from '@mui/icons-material/Info';
 import ListAltIcon from '@mui/icons-material/ListAlt';
@@ -38,25 +41,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { assets } from '../assest/assest';
-
-// Icons
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Add this import for Reports icon
 
 const Sidebar = () => {
   const theme = useTheme();
@@ -64,6 +49,8 @@ const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const [orderSubmenu, setOrderSubmenu] = useState(false);
   const location = useLocation();
+  const [username, setUsername] = useState('John Doe');
+  const [loading, setLoading] = useState(false);
   
   // Close sidebar when route changes on mobile
   useEffect(() => {
@@ -83,6 +70,11 @@ const Sidebar = () => {
 
   const toggleOrderSubmenu = () => {
     setOrderSubmenu(!orderSubmenu);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    // Navigation will be handled by existing logic
   };
 
   // Sidebar menu items with nested structure
@@ -106,223 +98,291 @@ const Sidebar = () => {
       icon: <ReceiptIcon />,
       path: '/bills'
     },
-    // Removed the invoices tab
+    {
+      text: 'Reports',
+      icon: <AssessmentIcon />,
+      path: '/reports'
+    }
   ];
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      {/* AppBar for mobile */}
+    <Box>
       {isMobile && (
-        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-          <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={toggleDrawer}
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" noWrap component="div">
-                Tour Management
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton color="inherit" size="large">
-                <Badge badgeContent={4} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-              <IconButton color="inherit" size="large" sx={{ ml: 1 }}>
-                <AccountCircleIcon />
-              </IconButton>
-            </Box>
+        <AppBar position="sticky" sx={{ backgroundColor: '#1a237e' }}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={toggleDrawer}
+              aria-label="menu"
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6">Admin Management</Typography>
           </Toolbar>
         </AppBar>
       )}
 
-      {/* Sidebar */}
       <Drawer
-        variant={isMobile ? 'temporary' : 'permanent'}
-        open={isMobile ? open : true}
-        onClose={toggleDrawer}
         sx={{
           width: 280,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: 280,
             boxSizing: 'border-box',
-            backgroundImage: 'linear-gradient(180deg, #2A3F54 0%, #1A2A38 100%)',
+            background: 'linear-gradient(to bottom, #1a237e, #283593)',
             color: 'white',
-            boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.2)',
           },
         }}
+        variant={isMobile ? 'temporary' : 'permanent'}
+        anchor="left"
+        open={isMobile ? open : true}
+        onClose={toggleDrawer}
+        ModalProps={{
+          keepMounted: true,  
+        }}
       >
-        <Toolbar sx={{ display: isMobile ? 'block' : 'none' }} />
-        
-        {/* Brand and profile section */}
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: '#fff' }}>
-            Admin System
+        {/* Header with company logo area */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          padding: '20px 10px',
+          backgroundColor: 'rgba(0,0,0,0.2)'
+        }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: '#fff', 
+              color: '#1a237e',
+              width: 70, 
+              height: 70, 
+              mb: 1,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+            }}
+          >
+            <BusinessCenterIcon sx={{ fontSize: 40 }} />
+          </Avatar>
+          
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.2rem' }}>
+            Admin Management
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', my: 2 }}>
-            <Avatar
-              src={assets.profile}
-              alt="Profile Picture"
-              sx={{ 
-                width: 100, 
-                height: 100,
-                border: '3px solid #fff',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-              }}
-            />
-            <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
-              John Doe
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#bbb' }}>
-              Administrator
-            </Typography>
-          </Box>
+          <Chip 
+            label={loading ? "Loading..." : username} 
+            variant="outlined" 
+            size="small"
+            sx={{ 
+              color: '#fff', 
+              borderColor: 'rgba(255,255,255,0.5)', 
+              mt: 1,
+              fontSize: '0.85rem',
+              '& .MuiChip-label': {
+                fontWeight: 500
+              }
+            }} 
+          />
         </Box>
-        
-        <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
-        
-        {/* Navigation menu */}
-        <Box sx={{ overflow: 'auto', p: 1 }}>
-          <List component="nav" sx={{ pt: 0 }}>
-            {menuItems.map((item) => (
-              <React.Fragment key={item.text}>
-                {item.hasSubmenu ? (
-                  <>
-                    <ListItem disablePadding>
-                      <ListItemButton 
-                        onClick={toggleOrderSubmenu}
+
+        <Box sx={{ overflow: 'auto', overflowX: 'hidden', mt: 2 }}>
+          <List>
+            {menuItems.map((item, index) => {
+              if (item.hasSubmenu) {
+                return (
+                  <React.Fragment key={item.text}>
+                    <ListItem 
+                      button
+                      onClick={toggleOrderSubmenu}
+                      sx={{
+                        backgroundColor: orderSubmenu ? 'rgba(255,255,255,0.2)' : 'transparent',
+                        '&:hover': {
+                          backgroundColor: orderSubmenu ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+                        },
+                        borderRadius: '4px',
+                        mx: 1,
+                        mb: 0.5,
+                        position: 'relative',
+                        '&::before': orderSubmenu ? {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          height: '60%',
+                          width: '4px',
+                          backgroundColor: '#fff',
+                          borderRadius: '0 4px 4px 0',
+                        } : {}
+                      }}
+                    >
+                      <ListItemIcon 
                         sx={{ 
-                          borderRadius: 1,
-                          mb: 0.5,
-                          backgroundColor: orderSubmenu ? 'rgba(255,255,255,0.1)' : 'transparent',
-                          '&:hover': {
-                            backgroundColor: 'rgba(255,255,255,0.15)',
-                          },
+                          color: orderSubmenu ? '#fff' : 'rgba(255,255,255,0.8)', 
+                          minWidth: '40px' 
                         }}
                       >
-                        <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                          {item.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={item.text} />
-                        {orderSubmenu ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                      </ListItemButton>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={item.text} 
+                        primaryTypographyProps={{
+                          fontWeight: orderSubmenu ? '600' : '400',
+                          color: orderSubmenu ? '#fff' : 'inherit'
+                        }}
+                      />
+                      {orderSubmenu ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </ListItem>
                     
                     <Collapse in={orderSubmenu} timeout="auto" unmountOnExit>
                       <List component="div" disablePadding>
-                        {item.items.map((subItem) => (
-                          <ListItemButton
-                            key={subItem.text}
-                            component={Link}
-                            to={subItem.path}
-                            selected={isActive(subItem.path)}
-                            sx={{
-                              pl: 4,
-                              py: 0.5,
-                              borderRadius: 1,
-                              ml: 2,
-                              mb: 0.5,
-                              backgroundColor: isActive(subItem.path) ? 'rgba(255,255,255,0.2)' : 'transparent',
-                              '&:hover': {
-                                backgroundColor: 'rgba(255,255,255,0.15)',
-                              },
-                              '&.Mui-selected': {
-                                backgroundColor: 'rgba(255,255,255,0.2)',
-                              },
-                            }}
-                          >
-                            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                              {subItem.icon}
-                            </ListItemIcon>
-                            <ListItemText 
-                              primary={subItem.text} 
-                              primaryTypographyProps={{ fontSize: '0.9rem' }}
-                            />
-                          </ListItemButton>
-                        ))}
+                        {item.items.map((subItem) => {
+                          const isSubActive = isActive(subItem.path);
+                          return (
+                            <ListItem 
+                              button 
+                              component={Link} 
+                              to={subItem.path}
+                              key={subItem.text}
+                              sx={{
+                                backgroundColor: isSubActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+                                '&:hover': {
+                                  backgroundColor: isSubActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+                                },
+                                borderRadius: '4px',
+                                mx: 1,
+                                pl: 4,
+                                mb: 0.5,
+                                position: 'relative',
+                                '&::before': isSubActive ? {
+                                  content: '""',
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  height: '60%',
+                                  width: '4px',
+                                  backgroundColor: '#fff',
+                                  borderRadius: '0 4px 4px 0',
+                                } : {}
+                              }}
+                            >
+                              <ListItemIcon 
+                                sx={{ 
+                                  color: isSubActive ? '#fff' : 'rgba(255,255,255,0.8)', 
+                                  minWidth: '40px' 
+                                }}
+                              >
+                                {subItem.icon}
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={subItem.text} 
+                                primaryTypographyProps={{
+                                  fontWeight: isSubActive ? '600' : '400',
+                                  color: isSubActive ? '#fff' : 'inherit'
+                                }}
+                              />
+                            </ListItem>
+                          );
+                        })}
                       </List>
                     </Collapse>
-                  </>
-                ) : (
-                  <ListItem disablePadding sx={{ mb: 0.5 }}>
-                    <ListItemButton
-                      component={Link}
+                    
+                    {index < menuItems.length - 1 && (
+                      <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
+                    )}
+                  </React.Fragment>
+                );
+              } else {
+                const isItemActive = isActive(item.path);
+                return (
+                  <React.Fragment key={item.text}>
+                    <ListItem 
+                      button 
+                      component={Link} 
                       to={item.path}
-                      selected={isActive(item.path)}
                       sx={{
-                        borderRadius: 1,
-                        backgroundColor: isActive(item.path) ? 'rgba(255,255,255,0.2)' : 'transparent',
+                        backgroundColor: isItemActive ? 'rgba(255,255,255,0.2)' : 'transparent',
                         '&:hover': {
-                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          backgroundColor: isItemActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
                         },
-                        '&.Mui-selected': {
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                        },
+                        borderRadius: '4px',
+                        mx: 1,
+                        mb: 0.5,
+                        position: 'relative',
+                        '&::before': isItemActive ? {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          height: '60%',
+                          width: '4px',
+                          backgroundColor: '#fff',
+                          borderRadius: '0 4px 4px 0',
+                        } : {}
                       }}
                     >
-                      <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                      <ListItemIcon 
+                        sx={{ 
+                          color: isItemActive ? '#fff' : 'rgba(255,255,255,0.8)', 
+                          minWidth: '40px' 
+                        }}
+                      >
                         {item.icon}
                       </ListItemIcon>
-                      <ListItemText primary={item.text} />
-                    </ListItemButton>
-                  </ListItem>
-                )}
-              </React.Fragment>
-            ))}
-            
-            <Divider sx={{ my: 2, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-            
-            {/* Logout button */}
-            <ListItem disablePadding>
-              <ListItemButton
-                sx={{
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,0,0,0.1)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: '#ff6b6b', minWidth: 40 }}>
-                  <LogoutIcon />
-                </ListItemIcon>
-                <ListItemText primary="Logout" />
-              </ListItemButton>
-            </ListItem>
+                      <ListItemText 
+                        primary={item.text} 
+                        primaryTypographyProps={{
+                          fontWeight: isItemActive ? '600' : '400',
+                          color: isItemActive ? '#fff' : 'inherit'
+                        }}
+                      />
+                    </ListItem>
+                    {index < menuItems.length - 1 && (
+                      <Divider sx={{ my: 0.5, backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
+                    )}
+                  </React.Fragment>
+                );
+              }
+            })}
           </List>
+        </Box>
+
+        {/* Add Sign out button */}
+        <Box sx={{ mt: 'auto', mb: 2, mx: 2 }}>
+          <ListItem 
+            button 
+            onClick={handleLogout}
+            sx={{
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              },
+              borderRadius: '4px',
+            }}
+          >
+            <ListItemIcon sx={{ color: 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
+              <ExitToAppIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Sign Out" 
+              primaryTypographyProps={{
+                fontWeight: '500',
+              }}
+            />
+          </ListItem>
         </Box>
       </Drawer>
 
-      {/* Main content area with proper spacing */}
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          p: 3,
-          width: '100%',
-          minHeight: '100vh',
-          backgroundColor: '#f5f6fa',
-          marginLeft: isMobile ? 0 : 0,
-          paddingTop: isMobile ? 8 : 3,
-          transition: theme.transitions.create(['margin', 'width'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-        }}
-      >
-        {/* Toolbar spacer only for mobile */}
-        {isMobile && <Toolbar />}
-        
-        {/* Content will be rendered here by React Router */}
+      <Box sx={{ 
+        marginLeft: isMobile ? 0 : 280, 
+        transition: 'margin 0.3s',
+        padding: 3,
+        minHeight: '100vh',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        {/* This is where your main content goes */}
       </Box>
     </Box>
   );

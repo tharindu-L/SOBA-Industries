@@ -3,6 +3,34 @@
 import pool from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
+// Function to get the next sequential manual order ID
+const getNextOrderId = async (connection) => {
+    try {
+        // Get the highest current ID number
+        const [result] = await connection.query(`
+            SELECT order_id FROM manual_orders 
+            WHERE order_id LIKE 'SCC%' 
+            ORDER BY CAST(SUBSTRING(order_id, 4) AS UNSIGNED) DESC 
+            LIMIT 1
+        `);
+        
+        let nextNumber = 1;
+        if (result.length > 0) {
+            // Extract the number part and increment
+            const currentId = result[0].order_id;
+            const currentNumber = parseInt(currentId.substring(3), 10);
+            nextNumber = currentNumber + 1;
+        }
+        
+        // Format with leading zeros (e.g., SCC001)
+        return `SCC${nextNumber.toString().padStart(3, '0')}`;
+    } catch (error) {
+        console.error('Error generating next order ID:', error);
+        // Fallback to the old format if there's an error
+        return `ORD-${uuidv4().substr(0, 8)}`;
+    }
+};
+
 // Get all products
 export const getProducts = async (req, res) => {
     try {
@@ -21,16 +49,20 @@ export const getProducts = async (req, res) => {
 // Create manual order
 export const createManualOrder = async (req, res) => {
     const { customerName, paymentMethod, items } = req.body;
-    const orderId = `ORD-${uuidv4().substr(0, 8)}`;
+    // Replace UUID with sequential ID
+    let connection;
+    let orderId;
     const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    let connection;
     try {
         // Get a connection from the pool
         connection = await pool.getConnection();
         
         // Start transaction
         await connection.beginTransaction();
+
+        // Generate sequential order ID
+        orderId = await getNextOrderId(connection);
 
         // 1. Create the order
         await connection.query(
@@ -65,6 +97,7 @@ export const createManualOrder = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
 // Get all manual orders
 // Get all orders without pagination
 export const getAllOrders = async (req, res) => {

@@ -126,3 +126,137 @@ tr:hover {
     font-size: 18px;
     color: #666;
 }
+
+.orders-list-container {
+    padding: 20px;
+}
+
+.orders-list-container h1 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.order-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.order-tabs button {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.3s ease;
+}
+
+.order-tabs button.active {
+    border-bottom: 2px solid #007bff;
+    color: #007bff;
+    font-weight: 600;
+}
+
+.orders-table-container {
+    overflow-x: auto;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.orders-table th, .orders-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.orders-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+}
+
+.orders-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.order-type {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.order-type.standard {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+}
+
+.order-type.custom {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status.completed, .status.paid {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+}
+
+.status.pending {
+    background-color: #fff8e1;
+    color: #ff6f00;
+}
+
+.status.cancelled {
+    background-color: #ffebee;
+    color: #b71c1c;
+}
+
+.item-list {
+    font-size: 13px;
+}
+
+.item-entry {
+    margin-bottom: 2px;
+}
+
+.no-orders {
+    text-align: center;
+    color: #777;
+    padding: 20px !important;
+}
+
+.loading, .error {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+}
+
+.error {
+    color: #d32f2f;
+}
+
+.item-description {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+.custom .item-entry {
+    color: #e65100;
+}

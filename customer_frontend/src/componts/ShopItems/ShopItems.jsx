@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { Badge } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import { jwtDecode } from 'jwt-decode';
 
 const ShopItems = () => {
   const [products, setProducts] = useState([]);
@@ -11,6 +12,7 @@ const ShopItems = () => {
   const [quantities, setQuantities] = useState({});
   const [quantityErrors, setQuantityErrors] = useState({});
   const [cartCount, setCartCount] = useState(0);
+  const [customerId, setCustomerId] = useState(null);
   const navigate = useNavigate();
 
   const updateCartCount = () => {
@@ -20,6 +22,22 @@ const ShopItems = () => {
   };
 
   useEffect(() => {
+    // Check authentication first
+    const token = localStorage.getItem('token');
+    
+    // We still allow non-authenticated users to view products
+    // but we'll set customerId if they are logged in
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        console.log("Decoded token:", decoded);
+        setCustomerId(decoded.id);
+      } catch (err) {
+        console.error('Error decoding token:', err);
+        // Don't redirect yet, still allow viewing products
+      }
+    }
+
     const fetchProducts = async () => {
       try {
         const response = await fetch('http://localhost:4000/api/product/get');
@@ -52,39 +70,76 @@ const ShopItems = () => {
     const numValue = parseInt(value);
     const product = products.find(p => p.productId === productId);
     
+    // Remove strict validation to allow users to add to cart more easily
     if (value === '') {
-      setQuantities(prev => ({ ...prev, [productId]: '' }));
-      setQuantityErrors(prev => ({ ...prev, [productId]: '' }));
+      setQuantities(prev => ({ ...prev, [productId]: 1 }));
+      setQuantityErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[productId];
+        return newErrors;
+      });
       return;
     }
 
     if (isNaN(numValue)) {
       setQuantities(prev => ({ ...prev, [productId]: 1 }));
-      setQuantityErrors(prev => ({ ...prev, [productId]: 'Must be a number' }));
+      setQuantityErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[productId];
+        return newErrors;
+      });
       return;
     }
 
+    // Ensure valid quantity
     if (numValue < 1) {
       setQuantities(prev => ({ ...prev, [productId]: 1 }));
-      setQuantityErrors(prev => ({ ...prev, [productId]: 'Minimum 1' }));
+      setQuantityErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[productId];
+        return newErrors;
+      });
       return;
     }
 
     if (numValue > product.stock) {
       setQuantities(prev => ({ ...prev, [productId]: product.stock }));
-      setQuantityErrors(prev => ({ ...prev, [productId]: `Max ${product.stock}` }));
+      setQuantityErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[productId];
+        return newErrors;
+      });
       return;
     }
 
     setQuantities(prev => ({ ...prev, [productId]: numValue }));
-    setQuantityErrors(prev => ({ ...prev, [productId]: '' }));
+    setQuantityErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[productId];
+      return newErrors;
+    });
   };
 
   const addToCart = (product) => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Please login to add items to cart');
-      navigate('/login');
+      // Show alert before redirecting
+      alert("Please login or signup first to add items to cart.");
+      localStorage.setItem('needsLogin', 'true');
+      localStorage.setItem('redirectAfterLogin', '/cart');
+      navigate('/');
+      return;
+    }
+
+    // Verify token is valid before adding to cart
+    try {
+      jwtDecode(token); // Will throw error if token is invalid
+    } catch (err) {
+      console.error('Error decoding token:', err);
+      localStorage.removeItem('token'); // Remove invalid token
+      alert("Your session has expired. Please login again.");
+      localStorage.setItem('needsLogin', 'true');
+      navigate('/');
       return;
     }
 
@@ -262,10 +317,9 @@ const ShopItems = () => {
                   borderRadius: '5px',
                   cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
                   fontWeight: 'bold',
-                  marginTop: 'auto',
-                  opacity: quantityErrors[product.productId] ? 0.7 : 1
+                  marginTop: 'auto'
                 }} 
-                disabled={product.stock <= 0 || quantityErrors[product.productId]}
+                disabled={product.stock <= 0}
                 onClick={() => addToCart(product)}
               >
                 {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}

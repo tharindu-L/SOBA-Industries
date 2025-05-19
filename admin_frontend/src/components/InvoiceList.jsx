@@ -15,9 +15,12 @@ import {
   ListItem,
   ListItemText,
   MenuItem,
+  Paper,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  ToggleButton, 
+  ToggleButtonGroup
 } from '@mui/material';
 import { Download, FilterList, Print, Search } from '@mui/icons-material';
 import React, { useEffect, useState } from 'react';
@@ -29,6 +32,7 @@ const InvoiceList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [billType, setBillType] = useState('custom'); // 'custom' or 'normal'
   const [filters, setFilters] = useState({
     paymentStatus: 'all',
     orderStatus: 'all'
@@ -37,11 +41,26 @@ const InvoiceList = () => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await axios.get('http://localhost:4000/api/quotation/get_all');
-        if (response.data.success) {
-          setInvoices(response.data.invoices);
+        setLoading(true);
+        
+        let endpoint;
+        if (billType === 'custom') {
+          endpoint = 'http://localhost:4000/api/quotation/get_all';
         } else {
-          setError('Failed to fetch invoices');
+          // Use the same endpoint as in OrderList.jsx
+          endpoint = 'http://localhost:4000/api/order/all_order';
+        }
+        
+        const response = await axios.get(endpoint);
+        if (billType === 'custom') {
+          if (response.data.success) {
+            setInvoices(response.data.invoices);
+          } else {
+            setError('Failed to fetch custom invoices');
+          }
+        } else {
+          // Direct assignment as in OrderList.jsx
+          setInvoices(response.data);
         }
       } catch (err) {
         setError(err.message);
@@ -51,7 +70,7 @@ const InvoiceList = () => {
     };
 
     fetchInvoices();
-  }, []);
+  }, [billType]);
 
   const handleDownload = (invoiceId) => {
     // Find the invoice data
@@ -232,16 +251,44 @@ const InvoiceList = () => {
     // window.print();
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = invoice.invoice_id.toString().includes(searchQuery) ||
-      invoice.customer_id.includes(searchQuery) ||
-      invoice.job_description?.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleBillTypeChange = (event, newBillType) => {
+    if (newBillType !== null) {
+      setBillType(newBillType);
+      setFilters({ paymentStatus: 'all', orderStatus: 'all' });
+      setSearchQuery('');
+    }
+  };
 
-    const matchesPaymentStatus = filters.paymentStatus === 'all' || 
-      invoice.payment_status === filters.paymentStatus;
-      
-    const matchesOrderStatus = filters.orderStatus === 'all' || 
-      invoice.order_status === filters.orderStatus;
+  const filteredInvoices = invoices.filter(invoice => {
+    // Handle search differently based on bill type
+    let matchesSearch;
+    
+    if (billType === 'custom') {
+      matchesSearch = (invoice.invoice_id?.toString() || '').includes(searchQuery) ||
+        (invoice.customer_id?.toString() || '').includes(searchQuery) ||
+        ((invoice.job_description || '').toLowerCase()).includes(searchQuery.toLowerCase());
+    } else {
+      matchesSearch = (invoice.order_id?.toString() || '').includes(searchQuery) ||
+        (invoice.customer_id?.toString() || '').includes(searchQuery) ||
+        ((invoice.current_status || '').toLowerCase()).includes(searchQuery.toLowerCase());
+    }
+
+    let matchesPaymentStatus, matchesOrderStatus;
+    
+    if (billType === 'custom') {
+      matchesPaymentStatus = filters.paymentStatus === 'all' || 
+        (invoice.payment_status === filters.paymentStatus);
+        
+      matchesOrderStatus = filters.orderStatus === 'all' || 
+        (invoice.order_status === filters.orderStatus);
+    } else {
+      // Adapt to normal order status structure from OrderList.jsx
+      matchesPaymentStatus = filters.paymentStatus === 'all' || 
+        invoice.payment_status === filters.paymentStatus;
+        
+      matchesOrderStatus = filters.orderStatus === 'all' || 
+        invoice.current_status === filters.orderStatus;
+    }
 
     return matchesSearch && matchesPaymentStatus && matchesOrderStatus;
   });
@@ -263,14 +310,61 @@ const InvoiceList = () => {
   }
 
   return (
-    <Container style={{marginTop:'-700px'}} maxWidth="lg">
-      <Box mt={4} mb={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Invoice Management
-        </Typography>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          borderRadius: 2,
+          backgroundColor: 'transparent'
+        }}
+      >
+        {/* Header */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            {billType === 'custom' ? 'Custom Orders Bills' : 'Normal Orders Bills'}
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<FilterList />}
+            onClick={() => {
+              setFilters({ paymentStatus: 'all', orderStatus: 'all' });
+              setSearchQuery('');
+            }}
+          >
+            Clear Filters
+          </Button>
+        </Box>
 
-        {/* Control Bar */}
-        <Card sx={{ mb: 3, p: 2, backgroundColor: 'background.paper' }}>
+        {/* Bill Type Toggle */}
+        <Box display="flex" justifyContent="center" mb={3}>
+          <ToggleButtonGroup
+            value={billType}
+            exclusive
+            onChange={handleBillTypeChange}
+            aria-label="bill type"
+            color="primary"
+          >
+            <ToggleButton value="custom" aria-label="custom bills">
+              Custom Order Bills
+            </ToggleButton>
+            <ToggleButton value="normal" aria-label="normal bills">
+              Normal Order Bills
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {/* Search and Filter */}
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 2, 
+            mb: 4, 
+            borderRadius: 2,
+            backgroundColor: 'white'
+          }}
+        >
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
@@ -282,6 +376,7 @@ const InvoiceList = () => {
                 InputProps={{
                   startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />
                 }}
+                size="small"
               />
             </Grid>
             <Grid item xs={6} md={3}>
@@ -292,6 +387,7 @@ const InvoiceList = () => {
                 value={filters.paymentStatus}
                 onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
                 variant="outlined"
+                size="small"
               >
                 <MenuItem value="all">All Payments</MenuItem>
                 <MenuItem value="Paid">Paid</MenuItem>
@@ -306,6 +402,7 @@ const InvoiceList = () => {
                 value={filters.orderStatus}
                 onChange={(e) => setFilters({ ...filters, orderStatus: e.target.value })}
                 variant="outlined"
+                size="small"
               >
                 <MenuItem value="all">All Orders</MenuItem>
                 <MenuItem value="completed">Completed</MenuItem>
@@ -321,148 +418,275 @@ const InvoiceList = () => {
                   setFilters({ paymentStatus: 'all', orderStatus: 'all' });
                   setSearchQuery('');
                 }}
-                sx={{ height: 56 }}
+                sx={{ height: 40 }}
               >
-                Clear All
+                Reset
               </Button>
             </Grid>
           </Grid>
-        </Card>
+        </Paper>
+
+        {/* Order count */}
+        <Box mb={3}>
+          <Typography variant="body1" color="text.secondary">
+            Showing {filteredInvoices.length} of {invoices.length} {billType === 'custom' ? 'custom' : 'normal'} order bills
+          </Typography>
+        </Box>
 
         {/* Results Section */}
         {filteredInvoices.length === 0 ? (
-          <Box textAlign="center" p={4}>
-            <Typography variant="h6" color="textSecondary">
-              No invoices found matching your criteria
+          <Box textAlign="center" py={5}>
+            <Typography variant="h6" color="text.secondary">
+              No {billType === 'custom' ? 'custom' : 'normal'} order bills found matching your criteria
             </Typography>
+            <Button 
+              variant="text" 
+              color="primary"
+              onClick={() => {
+                setFilters({ paymentStatus: 'all', orderStatus: 'all' });
+                setSearchQuery('');
+              }}
+              sx={{ mt: 2 }}
+            >
+              Reset Filters
+            </Button>
           </Box>
         ) : (
-          filteredInvoices.map((invoice) => (
-            <Card key={invoice.invoice_id} sx={{ mb: 3, boxShadow: 3 }}>
-              <CardHeader
-                title={`Invoice #${invoice.invoice_id}`}
-                subheader={
-                  <Box>
-                    <Typography variant="caption">
-                      Created: {new Date(invoice.created_at).toLocaleDateString()}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      Last Updated: {new Date(invoice.updatedAt).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                }
-                action={
-                  <Box display="flex" gap={1} alignItems="center">
-                    <Box>
-                      <Chip
-                        label={invoice.payment_status}
-                        color={
-                          invoice.payment_status === 'Paid' ? 'success' :
-                          invoice.payment_status === 'Partially Paid' ? 'warning' : 'default'
+          <Box className="orders-container">
+            {filteredInvoices.map((invoice) => (
+              <Card 
+                key={billType === 'custom' ? invoice.invoice_id : invoice.order_id} 
+                sx={{ 
+                  mb: 3, 
+                  borderRadius: 2, 
+                  overflow: 'hidden',
+                  boxShadow: 2,
+                  transition: 'box-shadow 0.3s ease-in-out',
+                  '&:hover': {
+                    boxShadow: 4
+                  }
+                }}
+                className="order-card"
+              >
+                <CardHeader
+                  sx={{ 
+                    backgroundColor: '#f9f9f9',
+                    transition: 'background-color 0.3s ease',
+                    borderBottom: '1px solid #eaeaea',
+                    '&:hover': {
+                      backgroundColor: '#f0f2fa'
+                    }
+                  }}
+                  title={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="h6" component="span">
+                        {billType === 'custom' 
+                          ? `Invoice #${invoice.invoice_id}`
+                          : `Order #${invoice.order_id}`
                         }
-                      />
-                      <Chip
-                        label={invoice.order_status.replace('_', ' ')}
-                        color={
-                          invoice.order_status === 'completed' ? 'success' :
-                          invoice.order_status === 'in_progress' ? 'warning' : 'default'
-                        }
-                        sx={{ ml: 1 }}
-                      />
-                    </Box>
-                    <Box>
-                      <Tooltip title="Download Invoice">
-                        <IconButton onClick={() => handleDownload(invoice.invoice_id)}>
-                          <Download />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Print Invoice">
-                        <IconButton onClick={() => handlePrint(invoice.invoice_id)}>
-                          <Print />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                }
-              />
-              
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <List dense>
-                      <ListItem>
-                        <ListItemText 
-                          primary="Quotation ID" 
-                          secondary={invoice.quotation_id} 
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText 
-                          primary="Customer ID" 
-                          secondary={invoice.customer_id} 
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText
-                          primary="Payment Progress"
-                          secondary={`LKR${invoice.paid_amount} of LKR${invoice.total_amount}`}
-                        />
-                      </ListItem>
-                    </List>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <List dense>
-                      <ListItem>
-                        <ListItemText
-                          primary="Total Amount"
-                          secondary={`LKR${invoice.total_amount}`}
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText
-                          primary="Amount Due"
-                          secondary={`LKR${(parseFloat(invoice.total_amount) - parseFloat(invoice.paid_amount)).toFixed(2)}`}
-                        />
-                      </ListItem>
-                    </List>
-                  </Grid>
-                </Grid>
-
-                {invoice.job_description && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="subtitle2" gutterBottom>
-                      Job Description:
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {invoice.job_description}
-                    </Typography>
-                  </>
-                )}
-
-                <Divider sx={{ my: 2 }} />
-
-                <Typography variant="subtitle2" gutterBottom>
-                  Items Breakdown:
-                </Typography>
-                <List dense>
-                  {invoice.items.map((item, index) => (
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={item.material_name}
-                        secondary={`Quantity: ${item.quantity} × LKR${item.unit_price}`}
-                      />
-                      <Typography variant="body2">
-                        LKR {(item.quantity * parseFloat(item.unit_price)).toFixed(2)}
                       </Typography>
-                    </ListItem>
-                  ))}
-                </List>
-              </CardContent>
-            </Card>
-          ))
+                    </Box>
+                  }
+                  subheader={
+                    <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                      <Typography variant="body2" color="text.secondary">
+                        Created: {new Date(billType === 'custom' ? invoice.created_at : invoice.order_date).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  }
+                  action={
+                    <Box display="flex" gap={1} alignItems="center">
+                      <Box>
+                        <Chip
+                          label={billType === 'custom' ? invoice.payment_status : invoice.payment_status || 'Unpaid'}
+                          size="small"
+                          color={
+                            (billType === 'custom' ? invoice.payment_status : invoice.payment_status) === 'Paid' ? 'success' :
+                            (billType === 'custom' ? invoice.payment_status : invoice.payment_status) === 'Partially Paid' ? 'warning' : 'default'
+                          }
+                        />
+                        <Chip
+                          label={billType === 'custom' 
+                            ? (invoice.order_status ? invoice.order_status.replace('_', ' ') : 'Unknown')
+                            : invoice.current_status
+                          }
+                          size="small"
+                          color={
+                            (billType === 'custom' ? invoice.order_status : invoice.current_status) === 'completed' ? 'success' :
+                            (billType === 'custom' ? invoice.order_status : invoice.current_status) === 'in_progress' || 
+                            (billType !== 'custom' && invoice.current_status === 'processing') ? 'warning' : 'default'
+                          }
+                          sx={{ ml: 1 }}
+                        />
+                      </Box>
+                      <Box>
+                        <Tooltip title="Download Invoice">
+                          <IconButton size="small" onClick={() => handleDownload(billType === 'custom' ? invoice.invoice_id : invoice.order_id)}>
+                            <Download />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Print Invoice">
+                          <IconButton size="small" onClick={() => handlePrint(billType === 'custom' ? invoice.invoice_id : invoice.order_id)}>
+                            <Print />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                  }
+                />
+                
+                <CardContent>
+                  {billType === 'custom' ? (
+                    // Custom order bill content
+                    <>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemText 
+                                primary="Quotation ID" 
+                                secondary={invoice.quotation_id} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText 
+                                primary="Customer ID" 
+                                secondary={invoice.customer_id} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText
+                                primary="Payment Progress"
+                                secondary={`LKR${invoice.paid_amount} of LKR${invoice.total_amount}`}
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemText
+                                primary="Total Amount"
+                                secondary={`LKR${invoice.total_amount}`}
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText
+                                primary="Amount Due"
+                                secondary={`LKR${(parseFloat(invoice.total_amount || 0) - parseFloat(invoice.paid_amount || 0)).toFixed(2)}`}
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                      </Grid>
+
+                      {invoice.job_description && (
+                        <>
+                          <Divider sx={{ my: 2 }} />
+                          <Typography variant="subtitle2" gutterBottom>
+                            Job Description:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {invoice.job_description}
+                          </Typography>
+                        </>
+                      )}
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Typography variant="subtitle2" gutterBottom>
+                        Items Breakdown:
+                      </Typography>
+                      <List dense sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, p: 1 }}>
+                        {invoice.items && invoice.items.map((item, index) => (
+                          <ListItem key={index} sx={{ borderBottom: index < invoice.items.length - 1 ? '1px solid #eee' : 'none' }}>
+                            <ListItemText
+                              primary={item.material_name}
+                              secondary={`Quantity: ${item.quantity} × LKR${item.unit_price}`}
+                            />
+                            <Typography variant="body2" fontWeight="medium">
+                              LKR {(item.quantity * parseFloat(item.unit_price || 0)).toFixed(2)}
+                            </Typography>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </>
+                  ) : (
+                    // Normal order bill content
+                    <>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemText 
+                                primary="Customer ID" 
+                                secondary={invoice.customer_id} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText 
+                                primary="Order Date" 
+                                secondary={new Date(invoice.order_date).toLocaleDateString()} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText
+                                primary="Payment Status"
+                                secondary={invoice.payment_status || "Pending"}
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemText
+                                primary="Total Amount"
+                                secondary={`LKR${invoice.total_amount}`}
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText
+                                primary="Payment Method"
+                                secondary={invoice.payment_method || "N/A"}
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemText
+                                primary="Order Status"
+                                secondary={invoice.current_status}
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                      </Grid>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Typography variant="subtitle2" gutterBottom>
+                        Items Ordered:
+                      </Typography>
+                      <List dense sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, p: 1 }}>
+                        {invoice.items && invoice.items.map((item, index) => (
+                          <ListItem key={index} sx={{ borderBottom: index < invoice.items.length - 1 ? '1px solid #eee' : 'none' }}>
+                            <ListItemText
+                              primary={item.product_name || "Product"}
+                              secondary={`Quantity: ${item.quantity} × LKR${item.unit_price}`}
+                            />
+                            <Typography variant="body2" fontWeight="medium">
+                              LKR {(item.quantity * parseFloat(item.unit_price || 0)).toFixed(2)}
+                            </Typography>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
         )}
-      </Box>
+      </Paper>
     </Container>
   );
 };

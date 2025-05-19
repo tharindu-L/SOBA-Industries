@@ -68,6 +68,13 @@ const ProductList = () => {
       return;
     }
 
+    // Ensure preorder_level is set to a number
+    if (selectedProduct.preorder_level === undefined || selectedProduct.preorder_level === '') {
+      selectedProduct.preorder_level = 10; // Set default value if not provided
+    }
+
+    console.log('Saving product with data:', selectedProduct);
+
     try {
       await axios.put('http://localhost:4000/api/product/update', selectedProduct);
       fetchProducts();
@@ -98,6 +105,7 @@ const ProductList = () => {
               <TableCell>Category</TableCell>
               <TableCell>Price</TableCell>
               <TableCell>Stock</TableCell>
+              <TableCell>Preorder Level</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -123,6 +131,7 @@ const ProductList = () => {
                 <TableCell>{product.category}</TableCell>
                 <TableCell>${product.price}</TableCell>
                 <TableCell>{product.stock}</TableCell>
+                <TableCell>{product.preorder_level || 10}</TableCell>
                 <TableCell>
                   <Button
                     variant="contained"
@@ -191,6 +200,16 @@ const ProductList = () => {
             fullWidth
             margin="normal"
             type="number"
+          />
+          <TextField
+            label="Preorder Level"
+            name="preorder_level"
+            value={selectedProduct?.preorder_level || '10'}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            type="number"
+            helperText="You'll be notified when stock falls below this level"
           />
           <TextField
             label="Description"

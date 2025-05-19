@@ -1,6 +1,5 @@
-import { Alert, Badge, Button, Form, Modal, Spinner, Table } from 'react-bootstrap';
+import { Alert, Badge, Button, Form, Modal, Spinner, Table, Card, Row, Col, ButtonGroup, InputGroup } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
-
 
 const styles = {
   pageContainer: {
@@ -43,6 +42,10 @@ const OrderManagement = () => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [updating, setUpdating] = useState(false);
+  // Add new state for filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch all orders
   const fetchOrders = async () => {
@@ -71,33 +74,58 @@ const OrderManagement = () => {
 
     try {
       setUpdating(true);
-      const response = await fetch('http://localhost:4000/api/order/all_order_update', {
+      setError(null); // Clear any previous errors
+      
+      // Create the request body with multiple formats to handle different API expectations
+      const requestBody = JSON.stringify({
+        orderId: currentOrder.order_id,
+        status: newStatus,
+        // Include alternative property names that the API might expect
+        order_id: currentOrder.order_id,
+        new_status: newStatus
+      });
+      
+      // Try the correct endpoint
+      const endpoint = 'http://localhost:4000/api/order/all_order_update'; // Using the original endpoint name
+      
+      console.log(`Trying to update order status at ${endpoint} with:`, JSON.parse(requestBody));
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          order_id: currentOrder.order_id,
-          new_status: newStatus
-        }),
+        body: requestBody,
       });
 
+      // Handle the response
       if (!response.ok) {
-        throw new Error('Failed to update order status');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update order status');
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON error response:', textResponse);
+          throw new Error(`Server error (${response.status}): Please check the server logs`);
+        }
       }
 
-      const result = await response.json();
+      // Update the local state with the new status
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.order_id === currentOrder.order_id 
+            ? { ...order, current_status: newStatus } 
+            : order
+        )
+      );
       
-      // Update local state
-      setOrders(orders.map(order => 
-        order.order_id === currentOrder.order_id 
-          ? { ...order, current_status: newStatus } 
-          : order
-      ));
-
+      // Show success message or feedback
+      alert(`Order #${currentOrder.order_id} status updated to ${newStatus}`);
       setShowModal(false);
     } catch (err) {
-      setError(err.message);
+      console.error('Error updating order status:', err);
+      setError(`Failed to update order status: ${err.message}`);
     } finally {
       setUpdating(false);
     }
@@ -147,85 +175,216 @@ const OrderManagement = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center my-5">
-        <Spinner animation="border" />
-        <p>Loading orders...</p>
-      </div>
-    );
-  }
+  // Filter orders based on selected filters and search query
+  const getFilteredOrders = () => {
+    return orders.filter(order => {
+      // Status filter
+      if (statusFilter !== 'all' && order.current_status !== statusFilter) {
+        return false;
+      }
+      
+      // Payment filter
+      if (paymentFilter !== 'all' && order.payment_status !== paymentFilter) {
+        return false;
+      }
+      
+      // Search query (check order_id or customer_id)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const orderId = order.order_id.toString().toLowerCase();
+        const customerId = (order.customer_id || '').toString().toLowerCase();
+        
+        if (!orderId.includes(query) && !customerId.includes(query)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
 
-  if (error) {
-    return (
-      <Alert variant="danger" className="my-4">
-        Error: {error}
-      </Alert>
-    );
-  }
+  const filteredOrders = getFilteredOrders();
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setPaymentFilter('all');
+    setSearchQuery('');
+  };
 
   return (
     <div className="p-4">
       <h2 className="mb-4">Order Management</h2>
       
-      <Table striped bordered hover responsive>
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Customer ID</th>
-            <th>Order Date</th>
-            <th>Total Amount</th>
-            <th>Payment Status</th>
-            <th>Payment Method</th>
-            <th>Amount Paid</th>
-            <th>Status</th>
-            <th>Items</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map(order => (
-            <tr key={order.order_id}>
-              <td>{order.order_id}</td>
-              <td>{order.customer_id}</td>
-              <td>{new Date(order.order_date).toLocaleString()}</td>
-              <td>LKR {order.total_amount}</td>
-              <td><PaymentBadge status={order.payment_status} /></td>
-              <td><PaymentMethodBadge method={order.payment_method} /></td>
-              <td>LKR {order.amount_paid}</td>
-              <td><StatusBadge status={order.current_status} /></td>
-              <td>
-              <ul style={styles.itemsList}>
-                    {order.items.map(item => (
-                      <li key={item.order_item_id} style={styles.itemRow}>
-                        <div style={styles.itemName}>
-                          {item.product_name || `Product #${item.product_id}`}
-                        </div>
-                        <div style={styles.itemDetails}>
-                          Qty: {item.quantity} × LKR {item.unit_price} = LKR {(item.quantity * item.unit_price).toFixed(2)}
-                        </div>
-                      </li>
-                  ))}
-                </ul>
-              </td>
-              <td>
-                <Button 
-                  variant="outline-primary" 
-                  size="sm"
-                  onClick={() => {
-                    setCurrentOrder(order);
-                    setNewStatus(order.current_status);
-                    setShowModal(true);
-                  }}
+      {/* Add filter controls */}
+      <Card className="mb-4">
+        <Card.Header>
+          <h5 className="mb-0">Filter Orders</h5>
+        </Card.Header>
+        <Card.Body>
+          <Row className="g-3">
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Status Filter</Form.Label>
+                <Form.Select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  Update Status
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+                  <option value="all">All Statuses</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Payment Filter</Form.Label>
+                <Form.Select 
+                  value={paymentFilter}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
+                >
+                  <option value="all">All Payment Statuses</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                  <option value="refunded">Refunded</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Search by Order/Customer ID</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter order or customer ID"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <Button 
+                      variant="outline-secondary"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </InputGroup>
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <div>
+              <small className="text-muted">
+                Showing {filteredOrders.length} of {orders.length} orders
+              </small>
+            </div>
+            <div>
+              <Button 
+                variant="outline-secondary" 
+                size="sm" 
+                onClick={clearFilters}
+                disabled={statusFilter === 'all' && paymentFilter === 'all' && !searchQuery}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
 
+      {/* Error handling */}
+      {error && (
+        <Alert variant="danger" className="my-4">
+          Error: {error}
+        </Alert>
+      )}
+      
+      {/* Loading state */}
+      {loading ? (
+        <div className="text-center my-5">
+          <Spinner animation="border" />
+          <p>Loading orders...</p>
+        </div>
+      ) : (
+        <div style={styles.tableContainer}>
+          <Table striped bordered hover responsive style={styles.wideTable}>
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer ID</th>
+                <th>Order Date</th>
+                <th>Total Amount</th>
+                <th>Payment Status</th>
+                <th>Payment Method</th>
+                <th>Amount Paid</th>
+                <th>Status</th>
+                <th>Items</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map(order => (
+                <tr key={order.order_id}>
+                  <td>{order.order_id}</td>
+                  <td>{order.customer_id}</td>
+                  <td>{new Date(order.order_date).toLocaleString()}</td>
+                  <td>LKR {order.total_amount}</td>
+                  <td><PaymentBadge status={order.payment_status} /></td>
+                  <td><PaymentMethodBadge method={order.payment_method} /></td>
+                  <td>LKR {order.amount_paid}</td>
+                  <td><StatusBadge status={order.current_status} /></td>
+                  <td>
+                  <ul style={styles.itemsList}>
+                        {order.items.map(item => (
+                          <li key={item.order_item_id} style={styles.itemRow}>
+                            <div style={styles.itemName}>
+                              {item.product_name || `Product #${item.product_id}`}
+                            </div>
+                            <div style={styles.itemDetails}>
+                              Qty: {item.quantity} × LKR {item.unit_price} = LKR {(item.quantity * item.unit_price).toFixed(2)}
+                            </div>
+                          </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={() => {
+                        setCurrentOrder(order);
+                        setNewStatus(order.current_status);
+                        setShowModal(true);
+                      }}
+                    >
+                      Update Status
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              
+              {filteredOrders.length === 0 && (
+                <tr>
+                  <td colSpan="10" className="text-center py-4">
+                    {orders.length === 0 ? (
+                      "No orders found in the system"
+                    ) : (
+                      "No orders match the selected filters"
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </div>
+      )}
+      
       {/* Status Update Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
@@ -276,5 +435,4 @@ const OrderManagement = () => {
     </div>
   );
 };
-
 export default OrderManagement;

@@ -1,5 +1,5 @@
-import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table } from 'react-bootstrap';
-import { CheckCircle, Clock, FileEarmarkCheck, Plus, Search, Trash, XCircle } from 'react-bootstrap-icons';
+import { Alert, Badge, Button, Card, Col, Container, Dropdown, Form, Modal, Row, Spinner, Table, Tooltip, OverlayTrigger, Nav, Tabs, Tab, InputGroup } from 'react-bootstrap';
+import { CheckCircle, Clock, FileEarmarkCheck, Plus, Search, Trash, XCircle, FunnelFill } from 'react-bootstrap-icons';
 import React, { useEffect, useState } from 'react';
 
 const statusOptions = ['pending', 'in_progress', 'completed', 'cancelled'];
@@ -21,6 +21,13 @@ const styles = {
   },
   cardBody: {
     padding: '0.75rem' // Reduce card body padding
+  },
+  descriptionCell: {
+    maxWidth: '150px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    cursor: 'help'
   }
 };
 
@@ -44,11 +51,32 @@ const AdminQuotations = () => {
   const [invoiceData, setInvoiceData] = useState({});
   const [refreshInterval, setRefreshInterval] = useState(null);
 
-  // Fetch Orders
+  // Add filter states
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [approvalFilter, setApprovalFilter] = useState('all');
+  const [dueDateFilter, setDueDateFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Update category filter options to include the specific categories needed
+  const categoryOptions = [
+    { value: 'all', label: 'All Categories' },
+    { value: 'medals', label: 'Medals' },
+    { value: 'badges', label: 'Badges' },
+    { value: 'mugs', label: 'Mugs' },
+    { value: 'souvenirs', label: 'Souvenirs' },
+    { value: 'furniture', label: 'Furniture' },
+    { value: 'decor', label: 'Decor' },
+    { value: 'installation', label: 'Installation' },
+    { value: 'repair', label: 'Repair' },
+    { value: 'other', label: 'Other' }
+  ];
+
   const fetchOrders = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Fetch regular custom orders
       const response = await fetch('http://localhost:4000/api/order/all_custom_order', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -56,30 +84,18 @@ const AdminQuotations = () => {
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log("Custom orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
+          setOrders(data.orders || []);
+        }
+      } else {
+        console.error("Failed to fetch customer custom orders:", response.status);
       }
       
-      const data = await response.json();
-      if (data.success) {
-        // Enhanced logging to check the want_date field
-        console.log("Orders received:", data.orders ? data.orders.slice(0, 2) : "No orders");
-        
-        // Log want dates specifically
-        if (data.orders && data.orders.length > 0) {
-          console.log("Want dates in first few orders:");
-          data.orders.slice(0, 5).forEach(order => {
-            console.log(`Order ${order.orderId}: want date = ${order.wantDate || 'not set'}, type = ${typeof order.wantDate}`);
-          });
-        }
-        
-        setOrders(data.orders || []);
-        
-        // Fetch invoices for these orders to get customer approval status
-        await fetchInvoicesForOrders(data.orders || []);
-      } else {
-        setError(data.message || 'Failed to fetch orders');
-      }
+      // Fetch invoices for these orders to get customer approval status
+      await fetchInvoicesForOrders();
     } catch (error) {
       console.error('Error fetching orders:', error);
       setError('Network error while fetching orders. Please try again later.');
@@ -88,7 +104,7 @@ const AdminQuotations = () => {
     }
   };
 
-  // Enhanced and fixed fetchInvoicesForOrders function
+  // Fetch invoices for orders
   const fetchInvoicesForOrders = async () => {
     try {
       console.log("Fetching invoice data...");
@@ -140,7 +156,7 @@ const AdminQuotations = () => {
     console.log("Component mounted - fetching initial data");
     fetchOrders();
     
-    // Set up an interval to refresh data every 10 seconds (reduced from 15 to see changes faster)
+    // Set up an interval to refresh data every 10 seconds
     const interval = setInterval(() => {
       console.log("Auto-refresh triggered");
       fetchInvoicesForOrders(); // Only refresh invoice data to reduce load
@@ -155,24 +171,54 @@ const AdminQuotations = () => {
     };
   }, []); // Empty dependency array ensures this only runs once on mount
 
-  // Fetch Materials
-  const fetchMaterials = async () => {
+  // Fetch materials function with better error handling and retry capability
+  const fetchMaterials = async (retryCount = 0) => {
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/material/get_all', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      console.log('Fetching materials...');
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      // Try multiple endpoints to get materials (for redundancy)
+      const endpoints = [
+        'http://localhost:4000/api/material/get_all', 
+        'http://localhost:4000/api/supervisors/materials',
+        'http://localhost:4000/api/material/get'
+      ];
+      
+      let response = null;
+      let data = null;
+      let success = false;
+      
+      // Try each endpoint until one succeeds
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          response = await fetch(endpoint, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-store'
+          });
+          
+          if (response.ok) {
+            data = await response.json();
+            if (data.success && data.materials && data.materials.length > 0) {
+              console.log(`Successfully fetched ${data.materials.length} materials from ${endpoint}`);
+              success = true;
+              break;
+            }
+          }
+        } catch (endpointError) {
+          console.warn(`Error with endpoint ${endpoint}:`, endpointError);
+        }
       }
       
-      const data = await response.json();
-      if (data.success) {
+      if (success) {
+        console.log('Material data:', data.materials.slice(0, 2)); // Log first two materials for debugging
         setMaterials(data.materials);
-        // Initialize with empty array if no materials
+        
+        // Initialize with the first material
         if (data.materials.length > 0) {
           setMaterialItems([
             {
@@ -186,6 +232,14 @@ const AdminQuotations = () => {
         } else {
           setMaterialItems([]);
         }
+      } else if (retryCount < 3) {
+        // Retry up to 3 times with exponential backoff
+        console.log(`Retrying fetchMaterials (attempt ${retryCount + 1})...`);
+        setTimeout(() => {
+          fetchMaterials(retryCount + 1);
+        }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s backoff
+      } else {
+        throw new Error('Failed to fetch materials from any endpoint');
       }
     } catch (error) {
       console.error('Error fetching materials:', error);
@@ -193,6 +247,7 @@ const AdminQuotations = () => {
     }
   };
 
+  // Handle update button click
   const handleUpdateClick = (order) => {
     setCurrentOrder(order);
     setStatus(order.status || 'pending');
@@ -202,9 +257,8 @@ const AdminQuotations = () => {
     setError(null);
     setShowModal(true);
     
-    if (order.status === 'in_progress' || status === 'in_progress') {
-      fetchMaterials();
-    }
+    // Always fetch materials regardless of status
+    fetchMaterials();
   };
 
   const handleCloseModal = () => {
@@ -308,24 +362,33 @@ const AdminQuotations = () => {
     setError(null);
 
     try {
-      // Update the order status
-      const statusResponse = await fetch('http://localhost:4000/api/order/status', {
+      const endpoint = 'http://localhost:4000/api/order/status';
+      const requestBody = {
+        orderId: currentOrder.orderId,
+        status
+      };
+
+      console.log("Updating order:", requestBody);
+
+      // Update order status
+      const statusResponse = await fetch(endpoint, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          orderId: currentOrder.orderId,
-          status 
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log(`Status response code: ${statusResponse.status}`);
+      const responseText = await statusResponse.text();
+      console.log(`Response text: ${responseText}`);
+      
+      const statusData = responseText ? JSON.parse(responseText) : {};
       if (!statusResponse.ok) {
-        throw new Error(`HTTP error! Status: ${statusResponse.status}`);
+        throw new Error(`HTTP error! Status: ${statusResponse.status}. Details: ${responseText}`);
       }
 
-      const statusData = await statusResponse.json();
       if (!statusData.success) {
         throw new Error(statusData.message || 'Failed to update order status');
       }
@@ -363,7 +426,8 @@ const AdminQuotations = () => {
         });
 
         if (!invoiceResponse.ok) {
-          throw new Error(`HTTP error! Status: ${invoiceResponse.status}`);
+          const errorText = await invoiceResponse.text();
+          throw new Error(`HTTP error creating invoice! Status: ${invoiceResponse.status}. Details: ${errorText}`);
         }
 
         const invoiceData = await invoiceResponse.json();
@@ -375,18 +439,44 @@ const AdminQuotations = () => {
         await reduceMaterialStock(materialItems);
       }
 
-      // Show success message and refresh orders
-      setSuccessMessage(`Order #${currentOrder.orderId} has been successfully ${status === 'in_progress' ? 'approved' : status}`);
-      await fetchOrders();
-      handleCloseModal();
-      
-      // Clear success message after a few seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
-      
+      // After successful status update
+      if (statusResponse.ok) {
+        // Clear isSubmitting state first
+        setIsSubmitting(false);
+        
+        // Update the local orders state immediately with the new status
+        const updatedOrders = orders.map(order => {
+          if (order.orderId === currentOrder.orderId) {
+            console.log(`Updating order ${order.orderId} status from ${order.status} to ${status}`);
+            
+            return {
+              ...order,
+              status: status
+            };
+          }
+          return order;
+        });
+        
+        // Set the updated orders in state to trigger UI refresh
+        setOrders(updatedOrders);
+        
+        // Show success message
+        setSuccessMessage(`Order #${currentOrder.orderId} has been successfully ${status === 'in_progress' ? 'approved' : status}`);
+        
+        // Close modal before further processing
+        handleCloseModal();
+        
+        // Fetch invoices in the background
+        fetchInvoicesForOrders();
+        
+        // Clear success message after a delay
+        setTimeout(() => setSuccessMessage(null), 5000);
+      }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       setError(error.message || 'An error occurred during submission. Please try again.');
     } finally {
+      // Make sure isSubmitting is false in all cases
       setIsSubmitting(false);
     }
   };
@@ -433,7 +523,6 @@ const AdminQuotations = () => {
         }
       });
 
-      // Fix: Add the missing await Promise.all
       await Promise.all(updateRequests);
     } catch (error) {
       console.error('Error reducing material stock:', error);
@@ -478,15 +567,104 @@ const AdminQuotations = () => {
   };
 
   // Filter orders based on search term
-  const filteredOrders = orders.filter(order => 
-    (order.description && order.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (order.customerId && order.customerId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (order.orderId && order.orderId.toString().includes(searchTerm.toLowerCase())) ||
-    (order.status && order.status.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const getFilteredOrders = () => {
+    // First apply search term filter
+    let filtered = orders.filter(order => {
+      if (!searchTerm) return true;
+      
+      const searchIn = [
+        order.orderId?.toString() || '',
+        order.customerId?.toLowerCase() || '',
+        order.description?.toLowerCase() || '',
+        order.status?.toLowerCase() || ''
+      ];
+      
+      return searchIn.some(field => field.includes(searchTerm.toLowerCase()));
+    });
+    
+    // Then apply category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(order => 
+        order.category?.toLowerCase() === categoryFilter.toLowerCase()
+      );
+    }
+    
+    // Apply order status filter
+    if (orderStatusFilter !== 'all') {
+      filtered = filtered.filter(order => 
+        order.status === orderStatusFilter
+      );
+    }
+    
+    // Apply approval status filter
+    if (approvalFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        // Only check approval for orders in progress
+        if (order.status !== 'in_progress') {
+          return approvalFilter === 'not_required';
+        }
+        
+        const approvalStatus = invoiceData[order.orderId]?.approvalStatus;
+        
+        if (approvalFilter === 'approved') {
+          return approvalStatus === 'approved';
+        } else if (approvalFilter === 'pending') {
+          return approvalStatus === 'pending';
+        } else if (approvalFilter === 'cancelled') {
+          return approvalStatus === 'cancelled';
+        }
+        
+        return false;
+      });
+    }
+    
+    // Apply due date filter
+    if (dueDateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(order => {
+        if (!order.wantDate) {
+          return dueDateFilter === 'not_specified';
+        }
+        
+        const dueDate = new Date(order.wantDate);
+        dueDate.setHours(0, 0, 0, 0);
+        
+        if (dueDateFilter === 'overdue') {
+          return dueDate < today;
+        } else if (dueDateFilter === 'today') {
+          return dueDate.getTime() === today.getTime();
+        } else if (dueDateFilter === 'tomorrow') {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          return dueDate.getTime() === tomorrow.getTime();
+        } else if (dueDateFilter === 'this_week') {
+          const endOfWeek = new Date(today);
+          endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+          return dueDate >= today && dueDate <= endOfWeek;
+        } else if (dueDateFilter === 'next_week') {
+          const startOfNextWeek = new Date(today);
+          startOfNextWeek.setDate(today.getDate() + (7 - today.getDay() + 1));
+          
+          const endOfNextWeek = new Date(startOfNextWeek);
+          endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+          
+          return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
+        }
+        
+        return false;
+      });
+    }
+    
+    return filtered;
+  };
 
-  // Sort orders
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
+  // Calculate filtered and sorted orders
+  const filteredAndSearchedOrders = getFilteredOrders();
+  
+  // Then apply sorting
+  const sortedOrders = [...filteredAndSearchedOrders].sort((a, b) => {
     if (sortField === 'wantDate') {
       // Debug the sort field values
       console.log(`Sorting by wantDate: ${a.orderId}=${a.wantDate} vs ${b.orderId}=${b.wantDate}`);
@@ -509,6 +687,13 @@ const AdminQuotations = () => {
       return sortDirection === 'asc' 
         ? new Date(a.createdAt) - new Date(b.createdAt)
         : new Date(b.createdAt) - new Date(a.createdAt);
+    }
+
+    // Special handling for orderId (as numbers, not strings)
+    if (sortField === 'orderId') {
+      const idA = parseInt(a.orderId) || 0;
+      const idB = parseInt(b.orderId) || 0;
+      return sortDirection === 'asc' ? idA - idB : idB - idA;
     }
 
     // Handle regular fields
@@ -536,74 +721,39 @@ const AdminQuotations = () => {
     }
   };
 
-  // Status badge renderer with approval status
-  const renderStatusBadge = (status, orderId) => {
-    // First render the order status badge
-    let orderStatusBadge;
-    
+  // Status badge renderer
+  const renderStatusBadge = (status) => {
     switch (status) {
       case 'completed':
-        orderStatusBadge = (
+        return (
           <Badge bg="success">
             <FileEarmarkCheck className="me-1" /> Completed
           </Badge>
         );
-        break;
       case 'cancelled':
-        orderStatusBadge = (
+        return (
           <Badge bg="danger">
             <XCircle className="me-1" /> Cancelled
           </Badge>
         );
-        break;
       case 'in_progress':
-        orderStatusBadge = (
+        return (
           <Badge bg="primary">
             <Clock className="me-1" /> Approved
           </Badge>
         );
-        break;
       default:
-        orderStatusBadge = (
+        return (
           <Badge bg="warning" text="dark">
             <Clock className="me-1" /> Pending
           </Badge>
         );
-        break;
     }
-    
-    // Then check if we have an invoice with approval status for this order
-    const invoiceInfo = invoiceData[orderId];
-    if (invoiceInfo && status === 'in_progress') {
-      let approvalBadge;
-      
-      switch (invoiceInfo.approvalStatus) {
-        case 'approved':
-          approvalBadge = <Badge bg="success" className="ms-2">Customer Approved</Badge>;
-          break;
-        case 'cancelled':
-          approvalBadge = <Badge bg="danger" className="ms-2">Customer Cancelled</Badge>;
-          break;
-        default:
-          approvalBadge = <Badge bg="warning" text="dark" className="ms-2">Approval Pending</Badge>;
-          break;
-      }
-      
-      return (
-        <div>
-          {orderStatusBadge} {approvalBadge}
-        </div>
-      );
-    }
-    
-    return orderStatusBadge;
   };
 
-  // Update renderApprovalBadge to improve debugging
+  // Render customer approval badge
   const renderApprovalBadge = (orderId) => {
     const invoiceInfo = invoiceData[orderId];
-    
-    console.log(`Rendering approval badge for order ${orderId}:`, invoiceInfo);
     
     if (!invoiceInfo || !invoiceInfo.approvalStatus) {
       return (
@@ -637,9 +787,48 @@ const AdminQuotations = () => {
     }
   };
 
-  // Add a manual refresh button for invoice approvals
+  // Manual refresh for invoice approvals
   const handleRefreshApprovals = () => {
     fetchInvoicesForOrders();
+  };
+
+  // Render description with tooltip
+  const renderDescription = (description, special_notes) => {
+    let fullText = description || '';
+    
+    if (special_notes) {
+      fullText = fullText ? `${fullText}\n\nSpecial Notes: ${special_notes}` : `Special Notes: ${special_notes}`;
+    }
+    
+    if (!fullText) return 'Not specified';
+    
+    if (fullText.length <= 30) {
+      return fullText;
+    }
+    
+    return (
+      <OverlayTrigger
+        placement="right"
+        overlay={
+          <Tooltip id={`tooltip-description-${Math.random()}`} style={{maxWidth: '400px'}}>
+            <div style={{whiteSpace: 'pre-wrap', textAlign: 'left'}}>{fullText}</div>
+          </Tooltip>
+        }
+      >
+        <div style={styles.descriptionCell}>
+          {fullText}
+        </div>
+      </OverlayTrigger>
+    );
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setOrderStatusFilter('all');
+    setApprovalFilter('all');
+    setDueDateFilter('all');
   };
 
   return (
@@ -647,7 +836,7 @@ const AdminQuotations = () => {
       <Card className="shadow-sm">
         <Card.Header className="bg-primary text-white">
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="mb-0">Order Management</h2>
+            <h2 className="mb-0">Job List Management</h2>
             <div>
               <Button 
                 variant="outline-light" 
@@ -686,21 +875,141 @@ const AdminQuotations = () => {
             </Alert>
           )}
           
-          <Row className="mb-4">
-            <Col md={6}>
-              <div className="input-group">
-                <span className="input-group-text">
-                  <Search />
-                </span>
-                <Form.Control
-                  type="text"
-                  placeholder="Search by description, customer ID, order ID or status..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          {/* Replace the existing filter panel with improved filters */}
+          <Card className="mb-4">
+            <Card.Header className="bg-light">
+              <h5 className="mb-0">
+                <FunnelFill className="me-2" />
+                Filter Jobs
+              </h5>
+            </Card.Header>
+            <Card.Body>
+              <Row className="g-3">
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Product Category</Form.Label>
+                    <Form.Select 
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                    >
+                      {categoryOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Job Status</Form.Label>
+                    <Form.Select 
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">Approved</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Customer Approval</Form.Label>
+                    <Form.Select 
+                      value={approvalFilter}
+                      onChange={(e) => setApprovalFilter(e.target.value)}
+                    >
+                      <option value="all">All</option>
+                      <option value="approved">Customer Approved</option>
+                      <option value="pending">Awaiting Approval</option>
+                      <option value="cancelled">Customer Cancelled</option>
+                      <option value="not_required">Not Required</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={6} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Due Date</Form.Label>
+                    <Form.Select 
+                      value={dueDateFilter}
+                      onChange={(e) => setDueDateFilter(e.target.value)}
+                    >
+                      <option value="all">All Dates</option>
+                      <option value="overdue">Overdue Jobs</option>
+                      <option value="today">Due Today</option>
+                      <option value="tomorrow">Due Tomorrow</option>
+                      <option value="this_week">Due This Week</option>
+                      <option value="next_week">Due Next Week</option>
+                      <option value="not_specified">No Due Date</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="mt-3">
+                <Col>
+                  <Form.Group>
+                    <Form.Label>Search</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text>
+                        <Search />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder="Search by job ID, customer ID or description..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      {searchTerm && (
+                        <Button 
+                          variant="outline-secondary"
+                          onClick={() => setSearchTerm('')}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                  <small className="text-muted">
+                    Showing {sortedOrders.length} of {orders.length} jobs
+                  </small>
+                </div>
+                <div>
+                  <Badge bg="primary" className="me-2">
+                    Pending: {orders.filter(o => o.status === 'pending').length}
+                  </Badge>
+                  <Badge bg="info" className="me-2">
+                    In Progress: {orders.filter(o => o.status === 'in_progress').length}
+                  </Badge>
+                  <Badge bg="success" className="me-2">
+                    Completed: {orders.filter(o => o.status === 'completed').length}
+                  </Badge>
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm" 
+                    onClick={resetFilters}
+                    disabled={categoryFilter === 'all' && orderStatusFilter === 'all' && 
+                             approvalFilter === 'all' && dueDateFilter === 'all' && !searchTerm}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
               </div>
-            </Col>
-          </Row>
+            </Card.Body>
+          </Card>
+
+          {/* Remove the old row with search box and dropdown since we've integrated it into the filter panel */}
 
           {isLoading && !showModal ? (
             <div className="text-center py-5" >
@@ -733,7 +1042,6 @@ const AdminQuotations = () => {
                         <span className="ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </th>
-                    <th>Special Notes</th>
                     <th>Design Files</th>
                     <th onClick={() => handleSort('createdAt')} className="cursor-pointer">
                       Created At
@@ -758,7 +1066,7 @@ const AdminQuotations = () => {
                         <td>{order.orderId}</td>
                         <td>{order.customerId}</td>
                         <td>{order.category || 'Not specified'}</td>
-                        <td>{order.description}</td>
+                        <td>{renderDescription(order.description, order.special_notes)}</td>
                         <td>{order.quantity}</td>
                         <td>
                           {order.wantDate ? (
@@ -775,20 +1083,9 @@ const AdminQuotations = () => {
                           ) : 'Not specified'}
                         </td>
                         <td>
-                          {order.specialNotes ? (
-                            order.specialNotes.length > 20 
-                              ? (
-                                <span title={order.specialNotes}>
-                                  {order.specialNotes.substring(0, 20)}...
-                                </span>
-                              ) 
-                              : order.specialNotes
-                          ) : '-'}
-                        </td>
-                        <td>
                           {order.designFiles && order.designFiles.length > 0 ? (
                             <a 
-                              href={`http://localhost:4000/images/${order.designFiles[0]}`} 
+                              href={`http://localhost:4000${order.designFiles[0].startsWith('/') ? '' : '/images/'}${order.designFiles[0]}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-secondary"
@@ -822,7 +1119,7 @@ const AdminQuotations = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="12" className="text-center py-4"> {/* Update colspan to match new column count */}
+                      <td colSpan="11" className="text-center py-4">
                         {searchTerm 
                           ? "No orders match your search criteria" 
                           : "No orders available"}

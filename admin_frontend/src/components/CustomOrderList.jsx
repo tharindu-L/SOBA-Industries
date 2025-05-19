@@ -154,18 +154,21 @@ const resetFilters = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <CircularProgress />
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="60vh">
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" mt={2} color="text.secondary">
+          Loading orders...
+        </Typography>
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Box mt={4} display="flex" justifyContent="center">
         <Alert 
           severity="error" 
-          sx={{ mb: 2 }}
+          sx={{ width: '100%', maxWidth: 800 }}
           action={
             <Button color="inherit" size="small" onClick={refreshOrders}>
               Try Again
@@ -174,15 +177,12 @@ const resetFilters = () => {
         >
           {error}
         </Alert>
-        <Typography variant="body1">
-          Unable to load custom orders. Please try again later.
-        </Typography>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container style={{marginTop:'-700px'}} maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
       <Paper 
         elevation={0} 
         sx={{ 
@@ -205,115 +205,102 @@ const resetFilters = () => {
             Refresh
           </Button>
         </Box>
-        {/* Search and Filter */}
-<Paper 
-  elevation={3} 
-  sx={{ 
-    p: 2, 
-    mb: 4, 
-    borderRadius: 2,
-    backgroundColor: 'white'
-  }}
->
-  <Grid container spacing={2} alignItems="center">
-    <Grid item xs={12} md={5}>
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Search by Order ID, Customer ID or Description"
-        value={searchTerm}
-        onChange={handleSearch}
-        InputProps={{
-          startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
-        }}
-        size="small"
-      />
-    </Grid>
-    <Grid item xs={12} md={5}>
-      <Box display="flex" gap={1} flexWrap="wrap">
-        <Chip 
-          icon={<FilterListIcon />} 
-          label="All" 
-          onClick={() => handleStatusFilter('all')}
-          color={statusFilter === 'all' ? 'primary' : 'default'}
-          variant={statusFilter === 'all' ? 'filled' : 'outlined'}
-        />
-        <Chip 
-          label="Pending" 
-          onClick={() => handleStatusFilter('pending')}
-          color={statusFilter === 'pending' ? 'info' : 'default'}
-          variant={statusFilter === 'pending' ? 'filled' : 'outlined'}
-        />
-        <Chip 
-          label="In Progress" 
-          onClick={() => handleStatusFilter('in_progress')}
-          color={statusFilter === 'in_progress' ? 'warning' : 'default'}
-          variant={statusFilter === 'in_progress' ? 'filled' : 'outlined'}
-        />
-        <Chip 
-          label="Completed" 
-          onClick={() => handleStatusFilter('completed')}
-          color={statusFilter === 'completed' ? 'success' : 'default'}
-          variant={statusFilter === 'completed' ? 'filled' : 'outlined'}
-        />
-        <Chip 
-          label="Cancelled" 
-          onClick={() => handleStatusFilter('cancelled')}
-          color={statusFilter === 'cancelled' ? 'error' : 'default'}
-          variant={statusFilter === 'cancelled' ? 'filled' : 'outlined'}
-        />
-      </Box>
-    </Grid>
-    <Grid item xs={12} md={2}>
-      <Box display="flex" justifyContent="flex-end">
-        <Button 
-          variant="outlined" 
-          startIcon={<FilterAltOffIcon />}
-          onClick={resetFilters}
-          disabled={statusFilter === 'all' && !searchTerm}
-        >
-          Reset
-        </Button>
-      </Box>
-    </Grid>
-  </Grid>
-</Paper>
 
-{/* Orders count */}
-<Box mb={3}>
-  <Typography variant="body1" color="text.secondary">
-    Showing {filteredOrders.length} of {orders.length} custom orders
-  </Typography>
-</Box>
-        
-        {/* Orders count */}
+        {/* Search and Filter */}
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 2, 
+            mb: 4, 
+            borderRadius: 2,
+            backgroundColor: 'white'
+          }}
+        >
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search by Order ID, Customer ID or Description"
+                value={searchTerm}
+                onChange={handleSearch}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
+                }}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={5}>
+              <Box display="flex" gap={1} flexWrap="wrap">
+                <Chip 
+                  icon={<FilterListIcon />} 
+                  label="All" 
+                  onClick={() => handleStatusFilter('all')}
+                  color={statusFilter === 'all' ? 'primary' : 'default'}
+                  variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+                />
+                <Chip 
+                  label="Pending" 
+                  onClick={() => handleStatusFilter('pending')}
+                  color={statusFilter === 'pending' ? 'info' : 'default'}
+                  variant={statusFilter === 'pending' ? 'filled' : 'outlined'}
+                />
+                <Chip 
+                  label="In Progress" 
+                  onClick={() => handleStatusFilter('in_progress')}
+                  color={statusFilter === 'in_progress' ? 'warning' : 'default'}
+                  variant={statusFilter === 'in_progress' ? 'filled' : 'outlined'}
+                />
+                <Chip 
+                  label="Completed" 
+                  onClick={() => handleStatusFilter('completed')}
+                  color={statusFilter === 'completed' ? 'success' : 'default'}
+                  variant={statusFilter === 'completed' ? 'filled' : 'outlined'}
+                />
+                <Chip 
+                  label="Cancelled" 
+                  onClick={() => handleStatusFilter('cancelled')}
+                  color={statusFilter === 'cancelled' ? 'error' : 'default'}
+                  variant={statusFilter === 'cancelled' ? 'filled' : 'outlined'}
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <Box display="flex" justifyContent="flex-end">
+                <Button 
+                  variant="outlined" 
+                  startIcon={<FilterAltOffIcon />}
+                  onClick={resetFilters}
+                  disabled={statusFilter === 'all' && !searchTerm}
+                >
+                  Reset
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        {/* Order count */}
         <Box mb={3}>
           <Typography variant="body1" color="text.secondary">
-            Showing {orders.length} custom orders
+            Showing {filteredOrders.length} of {orders.length} custom orders
           </Typography>
         </Box>
-        
+
+        {/* Orders list */}
         {filteredOrders.length === 0 ? (
-          <Box 
-            sx={{ 
-              textAlign: 'center', 
-              py: 5, 
-              backgroundColor: '#f9f9f9', 
-              borderRadius: 2 
-            }}
-          >
-            <Typography variant="h6">No orders found matching your criteria</Typography>
-            <Typography variant="body2" color="text.secondary">
-              When customers place custom orders, they will appear here.
+          <Box textAlign="center" py={5}>
+            <Typography variant="h6" color="text.secondary">
+              No orders found matching your criteria
             </Typography>
             <Button 
-      variant="text" 
-      color="primary" 
-      onClick={resetFilters} 
-      sx={{ mt: 2 }}
-    >
-      Reset Filters
-    </Button>
+              variant="text" 
+              color="primary" 
+              onClick={resetFilters} 
+              sx={{ mt: 2 }}
+            >
+              Reset Filters
+            </Button>
           </Box>
         ) : (
           <Box className="orders-container">
@@ -322,7 +309,7 @@ const resetFilters = () => {
                 key={order.orderId} 
                 sx={{ 
                   mb: 3, 
-                  borderRadius: 2,
+                  borderRadius: 2, 
                   overflow: 'hidden',
                   boxShadow: expandedOrder === order.orderId ? 4 : 2,
                   transition: 'box-shadow 0.3s ease-in-out',

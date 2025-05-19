@@ -25,6 +25,13 @@ const CustomNavbar = ({ isHomePage }) => {
     if (token) {
       setIsAuthenticated(true);
     }
+    
+    // Check if we need to show the login modal
+    const needsLogin = localStorage.getItem('needsLogin');
+    if (needsLogin === 'true') {
+      setShowModal(true);
+      localStorage.removeItem('needsLogin'); // Clear the flag after using it
+    }
   }, []);
 
   // Handle scroll event and update navbar background color
@@ -78,7 +85,15 @@ const CustomNavbar = ({ isHomePage }) => {
         localStorage.setItem('token', response.data.token);
         setIsAuthenticated(true);
         closeModal();
-        window.location.reload(); // Refresh the page after login
+        
+        // Check if there was a redirect path stored
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          localStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else {
+          window.location.reload(); // Only reload if no specific redirect
+        }
       } else {
         alert(response.data.message);
       }
@@ -137,7 +152,7 @@ const CustomNavbar = ({ isHomePage }) => {
         bg={scrolling ? 'dark' : isHomePage ? 'transparent' : 'dark'}
         variant="dark"
         expand="lg"
-        className="custom-navbar fixed-top"
+        className={`custom-navbar fixed-top ${scrolling ? 'scrolled' : ''}`}
       >
         <Container fluid>
           <Navbar.Brand as={Link} to="/">
@@ -146,6 +161,7 @@ const CustomNavbar = ({ isHomePage }) => {
               width="120"
               height="40"
               alt="Logo"
+              className="brand-logo"
             />
           </Navbar.Brand>
 
@@ -166,7 +182,7 @@ const CustomNavbar = ({ isHomePage }) => {
             {isAuthenticated && (
               <div className="image-container">
                 <img
-                  className="btn-e-magazine-ms-lg-3"
+                  className="profile-image"
                   src={assest.td}
                   alt="Profile"
                   onMouseEnter={() => setIsDropdownOpen(true)}
@@ -178,9 +194,6 @@ const CustomNavbar = ({ isHomePage }) => {
                   </div>
                   <div className="dropdown-item" onClick={() => navigate('/dashboard/quotations')}>
                     My Dashboard
-                  </div>
-                   <div className="dropdown-item" onClick={() => navigate('/orders')}>
-                    My Orders
                   </div>
                   <div className="dropdown-item" onClick={handleLogout}>
                     Logout
@@ -202,18 +215,18 @@ const CustomNavbar = ({ isHomePage }) => {
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
             {!isLogin && (
-              <Form.Group controlId="formName">
+              <Form.Group className="mb-3" controlId="formName">
                 <Form.Control type="text" name="name" placeholder="Enter your name" required />
               </Form.Group>
             )}
-            <Form.Group controlId="formEmail">
+            <Form.Group className="mb-3" controlId="formEmail">
               <Form.Control type="email" name="email" placeholder="Enter your email" required />
             </Form.Group>
-            <Form.Group controlId="formPassword">
+            <Form.Group className="mb-3" controlId="formPassword">
               <Form.Control type="password" name="password" placeholder="Enter your password" required />
             </Form.Group>
             {!isLogin && (
-              <Form.Group controlId="formTelNum">
+              <Form.Group className="mb-3" controlId="formTelNum">
                 <Form.Control type="tel" name="tel_num" placeholder="Enter your phone number" required />
               </Form.Group>
             )}

@@ -1,19 +1,21 @@
-import { Avatar, Box, Chip, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
+import { Avatar, Box, Chip, CircularProgress, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import DescriptionIcon from '@mui/icons-material/Receipt';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+// Removed DescriptionIcon import as it's no longer needed
 import { jwtDecode } from 'jwt-decode';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const Sidebar = () => {
-  const [username, setUsername] = useState('Guest User');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,25 +23,39 @@ const Sidebar = () => {
     // Get token from localStorage
     const token = localStorage.getItem('token');
     
-    // If token exists, try to decode it
+    // If token exists, fetch user data
     if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        // Check if we have a customer name from token payload
-        if (decoded.name) {
-          setUsername(decoded.name);
-        } else if (decoded.customer_name) {
-          setUsername(decoded.customer_name);
-        } else if (decoded.email) {
-          // Use email if name is not available
-          setUsername(decoded.email.split('@')[0]);
+      setLoading(true);
+      
+      // Use the same API endpoint that works in ProfilePage
+      axios.get('http://localhost:4000/api/user/get_user', {
+        headers: { token }
+      })
+      .then(response => {
+        console.log("API Response:", response.data);
+        if (response.data && response.data.user) {
+          // Use customer_name from the user object
+          setUsername(response.data.user.customer_name || 'Customer');
         }
-        
-        // For debugging
-        console.log("Decoded token:", decoded);
-      } catch (error) {
-        console.error("Error decoding token:", error);
-      }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error fetching user data:", error);
+        setLoading(false);
+        // If API fails, try token decoding as fallback
+        try {
+          const decoded = jwtDecode(token);
+          console.log("Fallback to token:", decoded);
+          if (decoded.id) {
+            setUsername(`Customer #${decoded.id}`);
+          } else {
+            setUsername('Customer');
+          }
+        } catch (err) {
+          console.error("Token decode error:", err);
+          setUsername('Customer');
+        }
+      });
     } else {
       // Redirect to login if no token is found
       navigate('/login');
@@ -95,20 +111,24 @@ const Sidebar = () => {
           Customer Portal
         </Typography>
         
-        <Chip 
-          label={username} 
-          variant="outlined" 
-          size="small"
-          sx={{ 
-            color: '#fff', 
-            borderColor: 'rgba(255,255,255,0.5)', 
-            mt: 1,
-            fontSize: '0.85rem',
-            '& .MuiChip-label': {
-              fontWeight: 500
-            }
-          }} 
-        />
+        {loading ? (
+          <CircularProgress size={20} sx={{ color: '#fff', mt: 1 }} />
+        ) : (
+          <Chip 
+            label={username || 'Customer'}
+            variant="outlined" 
+            size="small"
+            sx={{ 
+              color: '#fff', 
+              borderColor: 'rgba(255,255,255,0.5)', 
+              mt: 1,
+              fontSize: '0.85rem',
+              '& .MuiChip-label': {
+                fontWeight: 500
+              }
+            }} 
+          />
+        )}
       </Box>
       <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
       <Box sx={{ overflow: 'auto', overflowX: 'hidden', mt: 2 }}>
@@ -265,43 +285,7 @@ const Sidebar = () => {
           </ListItem>
           <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 2, my: 0.5 }} />
 
-          <ListItem disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton 
-              onClick={() => navigate('/dashboard/bills')}
-              sx={{
-                backgroundColor: isActiveRoute('/dashboard/bills') ? 'rgba(255,255,255,0.2)' : 'transparent',
-                '&:hover': {
-                  backgroundColor: isActiveRoute('/dashboard/bills') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                },
-                borderRadius: '4px',
-                mx: 1,
-                position: 'relative',
-                '&::before': isActiveRoute('/dashboard/bills') ? {
-                  content: '""',
-                  position: 'absolute',
-                  left: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  height: '60%',
-                  width: '4px',
-                  backgroundColor: '#fff',
-                  borderRadius: '0 4px 4px 0',
-                } : {}
-              }}
-            >
-              <ListItemIcon sx={{ color: isActiveRoute('/dashboard/bills') ? '#fff' : 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
-                <DescriptionIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Bills"
-                primaryTypographyProps={{
-                  fontWeight: isActiveRoute('/dashboard/bills') ? '600' : '400',
-                  color: isActiveRoute('/dashboard/bills') ? '#fff' : 'inherit'
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-          <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 2, my: 0.5 }} />
+          {/* Removed the Bills ListItem and its Divider */}
 
           <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton 

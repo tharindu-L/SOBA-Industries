@@ -29,6 +29,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import WorkIcon from '@mui/icons-material/Work';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'; // Added new icon for custom orders
 import axios from 'axios';
 
 const Sidebar = () => {
@@ -91,6 +92,7 @@ const Sidebar = () => {
     { text: 'List Products', icon: <PeopleIcon />, path: '/list-products' },
     { text: 'Job List', icon: <WorkIcon />, path: '/job-list' },
     { text: 'Normal Orders', icon: <WorkIcon />, path: '/n-orders' },
+    { text: 'Cashier Custom Orders', icon: <ShoppingCartIcon />, path: '/custom-orders' }, // Added new menu item
   ];
 
   // Function to check if a menu item is active

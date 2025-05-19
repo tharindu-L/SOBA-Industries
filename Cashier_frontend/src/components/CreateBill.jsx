@@ -180,14 +180,9 @@ const BillingSystem = () => {
                         
                         <div className="form-group">
                             <label>Payment Method</label>
-                            <select
-                                value={paymentMethod}
-                                onChange={(e) => setPaymentMethod(e.target.value)}
-                            >
-                                <option value="cash">Cash</option>
-                                <option value="card">Credit Card</option>
-                                <option value="online">Online Payment</option>
-                            </select>
+                            <div className="static-field">Cash</div>
+                            {/* Hidden input to maintain the paymentMethod state */}
+                            <input type="hidden" value={paymentMethod} />
                         </div>
                     </div>
                     
@@ -238,13 +233,9 @@ const BillingSystem = () => {
                             <span>Subtotal:</span>
                             <span>${calculateTotal()}</span>
                         </div>
-                        <div className="summary-row">
-                            <span>Tax (10%):</span>
-                            <span>${(calculateTotal() * 0.1).toFixed(2)}</span>
-                        </div>
                         <div className="summary-row total">
                             <span>Total:</span>
-                            <span>${(calculateTotal() * 1.1).toFixed(2)}</span>
+                            <span>${calculateTotal()}</span>
                         </div>
                         
                         <button 
