@@ -118,7 +118,7 @@ const CreateCustomOrder = () => {
         }
 
         try {
-            // Create FormData object
+            // Create FormData object for file upload
             const formPayload = new FormData();
             formPayload.append('customerName', formData.customerName);
             formPayload.append('description', formData.description);
@@ -126,12 +126,16 @@ const CreateCustomOrder = () => {
             formPayload.append('quantity', formData.quantity);
             formPayload.append('specialNotes', formData.specialNotes || '');
             formPayload.append('wantDate', formData.wantDate);
+            
             // Add payment information
             formPayload.append('paymentMethod', paymentMethod);
             formPayload.append('totalAmount', totalAmount.toFixed(2));
             formPayload.append('amountPaid', amountToPay.toFixed(2));
-            // Add service charge
-            formPayload.append('serviceCharge', serviceCharge || '0');
+            
+            // Only include service charge if it has a value
+            if (parseFloat(serviceCharge) > 0) {
+                formPayload.append('serviceCharge', serviceCharge);
+            }
             
             // Add design image if present
             if (formData.designImage) {
@@ -145,20 +149,7 @@ const CreateCustomOrder = () => {
                 });
             }
 
-            console.log('Submitting form data:', {
-                customerName: formData.customerName,
-                description: formData.description,
-                itemType: formData.itemType,
-                quantity: formData.quantity,
-                specialNotes: formData.specialNotes,
-                wantDate: formData.wantDate,
-                paymentMethod: paymentMethod,
-                totalAmount: totalAmount.toFixed(2),
-                amountPaid: amountToPay.toFixed(2),
-                hasDesignImage: !!formData.designImage,
-                designFilesCount: designFiles.length,
-                serviceCharge: serviceCharge || '0'
-            });
+            console.log('Submitting custom order to API...');
 
             // Make the API request with the FormData
             const response = await axios.post(
@@ -174,7 +165,7 @@ const CreateCustomOrder = () => {
             console.log('API response:', response.data);
 
             if (response.data.success) {
-                alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}\nPayment: $${amountToPay.toFixed(2)} (${paymentMethod === 'advance' ? '30% Advance' : 'Full Payment'})`);
+                alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}\nPayment: LKR ${amountToPay.toFixed(2)} (${paymentMethod === 'advance' ? '30% Advance' : 'Full Payment'})`);
                 navigate('/cashier-dashboard');
             } else {
                 setError(response.data.message || 'Failed to create order request');
