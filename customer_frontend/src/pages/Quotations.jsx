@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+import { text } from '@fortawesome/fontawesome-svg-core';
 
 const Quotations = () => {
   const [orders, setOrders] = useState([]);
@@ -163,14 +164,14 @@ const Quotations = () => {
   return (
     <div className="quotations-container">
       <h2>Custom Orders</h2>
+      <br />
 
       {/* Form for creating a new order */}
       <div className="order-form-container mb-3">
-        <h3>Create New Custom Order</h3>
         {error && <Alert variant="danger">{error}</Alert>}
         
         <Form>
-        <Form.Group className="mb-3">
+        <Form.Group className="mb-3" >
           <Form.Label>Category *</Form.Label>
           <Form.Select 
             value={category}

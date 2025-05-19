@@ -1,24 +1,29 @@
 /* Global background color */
 .quotations-container {
-    background-color: #f4f4f9;  /* Light background color */
+    background-color: #ffffff;  /* Light background color */
     padding: 30px;
     border-radius: 8px;
+    margin-left: 40px;
   }
   
   /* Style for the form container */
   .quotation-form-container {
     background-color: #ffffff;  /* White background for the form */
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+  }
+  
+  /* Bold styling for form labels */
+  .quotations-container .form-label {
+    font-weight: bold;
   }
   
   /* Media Query for smaller screens */
   @media (max-width: 768px) {
     /* Hide the form container on smaller screens */
  
-    
     /* Adjust padding for mobile view */
     .quotations-container {
         margin-left: -240px;
@@ -29,4 +34,3 @@
       font-size: 14px;
     }
   }
-  

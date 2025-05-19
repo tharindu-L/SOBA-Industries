@@ -2,6 +2,8 @@
     max-width: 900px;
     margin-top: 20px; /* Changed from 110px to 20px to remove space for navbar */
     margin-bottom: 20px;
+    margin-left: auto; /* Center the container but with the left padding from profile-content */
+    margin-right: auto;
   }
   
   /* Styling for the profile card */
@@ -49,6 +51,10 @@
     margin: 10px auto;
   }
   
+  /* Layout for profile content */
+  .profile-content {
+    padding-left: 300px; /* Add padding to the left to move content to the right */
+  }
   
   /* Edit Button */
   .button-edit {

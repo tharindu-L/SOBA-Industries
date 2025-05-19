@@ -33,7 +33,7 @@ const UserInvoices = () => {
         
         if (!token) {
           setError('Authentication token not found. Please login again.');
-          navigate('/login');
+          navigate('/');
           return;
         }
         
@@ -69,7 +69,7 @@ const UserInvoices = () => {
         if (err.response?.status === 401) {
           setError('Session expired. Please login again.');
           localStorage.removeItem('token');
-          navigate('/login');
+          navigate('/');
         } else {
           setError(`Error fetching invoices: ${err.message}`);
         }
@@ -241,7 +241,7 @@ const UserInvoices = () => {
       
       if (!token) {
         setError('Authentication token missing. Please login again.');
-        navigate('/login');
+        navigate('/');
         return;
       }
       
@@ -314,7 +314,7 @@ const UserInvoices = () => {
   if (error) return <Alert variant="danger" className="mt-3">{error}</Alert>;
 
   return (
-    <Container className="mt-4">
+    <Container className="mt-4" style={{ marginLeft: '25px' }}>
       <h2 className="text-center mb-4">Your Invoices</h2>
       {invoices.length === 0 ? (
         <Alert style={{ maxWidth: '80%', marginLeft: '50px' }} variant="info">No invoices found.</Alert>

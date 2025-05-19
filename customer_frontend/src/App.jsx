@@ -33,8 +33,8 @@ const App = () => {
         backgroundAttachment: 'fixed',
       }}
     >
-      {/* Navbar and Footer for Home and Profile pages only */}
-      {(isHomePage || isProfilePage) && <CustomNavbar isHomePage={isHomePage} />}
+      {/* Navbar and Footer for Home  only */}
+      {(isHomePage) && <CustomNavbar isHomePage={isHomePage} />}
 
       {isHomePage && (
         <>
@@ -64,7 +64,7 @@ const App = () => {
       </div>
 
       {/* Footer only on Home and Profile pages */}
-      {(isHomePage || isProfilePage) && <Footer />}
+      {(isHomePage) && <Footer />}
     </div>
   );
 };
