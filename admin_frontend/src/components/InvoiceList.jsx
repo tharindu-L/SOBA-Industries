@@ -26,6 +26,9 @@ import { Download, FilterList, Print, Search } from '@mui/icons-material';
 import React, { useEffect, useState } from 'react';
 
 import axios from 'axios';
+// Add these imports for PDF generation
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const InvoiceList = () => {
   const [invoices, setInvoices] = useState([]);
@@ -74,110 +77,67 @@ const InvoiceList = () => {
 
   const handleDownload = (invoiceId) => {
     // Find the invoice data
-    const invoice = invoices.find(inv => inv.invoice_id === invoiceId);
+    const invoice = invoices.find(inv => 
+      billType === 'custom' ? inv.invoice_id === invoiceId : inv.order_id === invoiceId
+    );
     if (!invoice) return;
     
-    // Create invoice HTML content
-    const invoiceHTML = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invoice #${invoice.invoice_id}</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-          }
-          .invoice-container {
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid #eee;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
-          }
-          .invoice-header {
-            text-align: center;
-            margin-bottom: 20px;
-          }
-          .invoice-header h1 {
-            margin: 0;
-            font-size: 24px;
-            color: #333;
-          }
-          .company-details {
-            margin-bottom: 20px;
-            text-align: center;
-          }
-          .invoice-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-          }
-          .invoice-info-block {
-            flex: 1;
-          }
-          .job-description {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-          }
-          th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-          }
-          th {
-            background-color: #f2f2f2;
-          }
-          .totals {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-          }
-          .payment-details {
-            flex: 1;
-          }
-          .total-amount {
-            flex: 1;
-            text-align: right;
-          }
-          .footer {
-            margin-top: 30px;
-            text-align: center;
-            font-size: 12px;
-            color: #777;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-container">
-          <div class="invoice-header">
-            <h1>INVOICE</h1>
+    // Create a temporary div to render the invoice
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    document.body.appendChild(tempDiv);
+
+    // Generate different HTML based on bill type
+    if (billType === 'custom') {
+      tempDiv.innerHTML = generateCustomInvoiceHTML(invoice);
+    } else {
+      tempDiv.innerHTML = generateNormalInvoiceHTML(invoice);
+    }
+    
+    // Convert the HTML to PDF
+    setTimeout(() => {
+      html2canvas(tempDiv, {
+        scale: 2,
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        pdf.save(`Invoice-${billType === 'custom' ? invoice.invoice_id : invoice.order_id}.pdf`);
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+      });
+    }, 500);
+  };
+
+  const generateCustomInvoiceHTML = (invoice) => {
+    return `
+      <div style="font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; width: 750px;">
+        <div style="max-width: 750px; margin: 0 auto; border: 1px solid #eee; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 24px; color: #333;">INVOICE</h1>
           </div>
           
-          <div class="company-details">
-            <p>Your Company Name</p>
-            <p>123 Business Street, City, Country, ZIP</p>
+          <div style="margin-bottom: 20px; text-align: center;">
+            <p>SOBA Industries</p>
+            <p>123 Business Street, Colombo, Sri Lanka</p>
             <p>Phone: (123) 456-7890</p>
           </div>
           
-          <div class="invoice-info">
-            <div class="invoice-info-block">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
               <p><strong>Invoice #:</strong> ${invoice.invoice_id}</p>
-              <p><strong>Quotation #:</strong> ${invoice.quotation_id}</p>
+              <p><strong>Quotation #:</strong> ${invoice.quotation_id || 'N/A'}</p>
               <p><strong>Customer ID:</strong> ${invoice.customer_id}</p>
             </div>
-            <div class="invoice-info-block" style="text-align: right;">
+            <div style="text-align: right;">
               <p><strong>Date:</strong> ${new Date(invoice.created_at).toLocaleDateString()}</p>
               <p><strong>Payment Status:</strong> ${invoice.payment_status}</p>
               <p><strong>Order Status:</strong> ${invoice.order_status}</p>
@@ -185,64 +145,119 @@ const InvoiceList = () => {
           </div>
           
           ${invoice.job_description ? `
-            <div class="job-description">
-              <h3>Job Description:</h3>
+            <div style="margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+              <h3 style="margin-top: 0;">Job Description:</h3>
               <p>${invoice.job_description}</p>
             </div>
           ` : ''}
           
-          <table>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Item</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Quantity</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Unit Price</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Total</th>
               </tr>
             </thead>
             <tbody>
               ${invoice.items && invoice.items.map(item => `
                 <tr>
-                  <td>${item.material_name}</td>
-                  <td>${item.quantity}</td>
-                  <td>LKR${parseFloat(item.unit_price).toFixed(2)}</td>
-                  <td>LKR${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">${item.material_name}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">${item.quantity}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LKR${parseFloat(item.unit_price).toFixed(2)}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LKR${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
           
-          <div class="totals">
-            <div class="payment-details">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
               <p><strong>Payment Details:</strong></p>
               <p>Amount Paid: LKR${parseFloat(invoice.paid_amount || 0).toFixed(2)}</p>
               <p>Balance Due: LKR${(parseFloat(invoice.total_amount) - parseFloat(invoice.paid_amount || 0)).toFixed(2)}</p>
             </div>
-            <div class="total-amount">
+            <div style="text-align: right;">
               <p><strong>Total Amount:</strong> LKR${parseFloat(invoice.total_amount).toFixed(2)}</p>
             </div>
           </div>
           
-          <div class="footer">
+          <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #777;">
             <p>Thank you for your business!</p>
           </div>
         </div>
-      </body>
-      </html>
+      </div>
     `;
-    
-    // Convert HTML content to a Blob
-    const blob = new Blob([invoiceHTML], { type: 'text/html' });
-    
-    // Create a download link
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Invoice-${invoice.invoice_id}.html`;
-    
-    // Append to the document, click it, and remove it
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  };
+
+  const generateNormalInvoiceHTML = (invoice) => {
+    return `
+      <div style="font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; width: 750px;">
+        <div style="max-width: 750px; margin: 0 auto; border: 1px solid #eee; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 24px; color: #333;">ORDER INVOICE</h1>
+          </div>
+          
+          <div style="margin-bottom: 20px; text-align: center;">
+            <p>SOBA Industries</p>
+            <p>123 Business Street, Colombo, Sri Lanka</p>
+            <p>Phone: (123) 456-7890</p>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+              <p><strong>Order #:</strong> ${invoice.order_id}</p>
+              <p><strong>Customer ID:</strong> ${invoice.customer_id}</p>
+              <p><strong>Payment Method:</strong> ${invoice.payment_method || 'N/A'}</p>
+            </div>
+            <div style="text-align: right;">
+              <p><strong>Order Date:</strong> ${new Date(invoice.order_date).toLocaleDateString()}</p>
+              <p><strong>Payment Status:</strong> ${invoice.payment_status || 'Pending'}</p>
+              <p><strong>Order Status:</strong> ${invoice.current_status}</p>
+            </div>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Product</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Quantity</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Unit Price</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left; background-color: #f2f2f2;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoice.items && invoice.items.map(item => `
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">${item.product_name || 'Product'}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">${item.quantity}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LKR${parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LKR${(item.quantity * parseFloat(item.unit_price || 0)).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+            <div style="text-align: right; width: 250px;">
+              <p style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 5px 0;">
+                <span><strong>Subtotal:</strong></span>
+                <span>LKR${parseFloat(invoice.total_amount || 0).toFixed(2)}</span>
+              </p>
+              <p style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; padding: 5px 0;">
+                <span>Total:</span>
+                <span>LKR${parseFloat(invoice.total_amount || 0).toFixed(2)}</span>
+              </p>
+            </div>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #777;">
+            <p>Thank you for shopping with SOBA Industries!</p>
+          </div>
+        </div>
+      </div>
+    `;
   };
 
   const handlePrint = (invoiceId) => {
