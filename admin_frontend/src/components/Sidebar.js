@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   Box, 
   Drawer, 
@@ -37,6 +38,18 @@ const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const [orderSubmenu, setOrderSubmenu] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const auth = useAuth() || { isAuthenticated: false, logout: () => {} };
+  const { isAuthenticated, logout } = auth;
+
+  if (!isAuthenticated && !location.pathname.includes('login') && !location.pathname.includes('signup')) {
+    return null;
+  }
+
+  // Don't show sidebar on login or signup pages
+  if (location.pathname === '/login' || location.pathname === '/signup') {
+    return null;
+  }
 
   const toggleDrawer = () => {
     setOpen(!open);
@@ -47,8 +60,8 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    // Handle logout functionality
-    console.log("Logging out");
+    logout();
+    navigate('/login');
   };
 
   const isActive = (path) => {
