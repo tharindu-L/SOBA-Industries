@@ -96,6 +96,21 @@ const ProfilePage = () => {
         alert('Profile image updated successfully');
         setImage(response.data.profile_image); // Update the image in state
         setIsEditing(false); // Exit edit mode
+        
+        // Refresh user data after successful update
+        axios.get(`http://localhost:4000/api/user/get_user`, { 
+          headers: { token },
+        })
+        .then((response) => {
+          if (response.data && response.data.user) {
+            setUser(response.data.user);
+            // Force a refresh to update the navbar and sidebar
+            window.location.reload();
+          }
+        })
+        .catch((error) => {
+          console.error('Error refreshing user data:', error);
+        });
       } else {
         alert('Failed to update profile image: ' + response.data.message);
       }
