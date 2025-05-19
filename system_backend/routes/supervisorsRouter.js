@@ -7,7 +7,8 @@ import {
   useMaterials,
   getLowStockProducts,
   getCustomOrders,
-  updateCustomOrderStatus
+  updateCustomOrderStatus,
+  getAllSupervisors  // Add this import
 } from '../controllers/supervisorsController.js';
 import { getSupervisorMaterials } from '../controllers/machineController.js';
 import authMiddleware from '../middleware/auth.js';
@@ -36,5 +37,8 @@ supervisorsRouter.get('/materials', authMiddleware, getSupervisorMaterials);
 // Custom order routes
 supervisorsRouter.get('/custom-orders', authMiddleware, getCustomOrders);
 supervisorsRouter.post('/custom-orders/update-status', authMiddleware, updateCustomOrderStatus);
+
+// Add new route to get all supervisors for admin
+supervisorsRouter.get('/all', getAllSupervisors);
 
 export default supervisorsRouter;

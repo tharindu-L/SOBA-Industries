@@ -68,4 +68,52 @@ const loginCashier = async (req, res) => {
     }
 };
 
-export { registerCashier, loginCashier };
+// Update the getAllCashiers function to match your database structure
+const getAllCashiers = async (req, res) => {
+    try {
+        console.log('Fetching all cashiers');
+        
+        // Get cashier data with the correct column names
+        const [cashiers] = await pool.query(
+            'SELECT CashierID, cashier_name as username, email, password, tel_num FROM cashiers'
+        );
+        
+        console.log(`Retrieved ${cashiers.length} cashiers:`, cashiers);
+        
+        // Return the data directly, ensuring it's an array
+        res.json(cashiers || []);
+    } catch (error) {
+        console.error('Error fetching all cashiers:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching all cashiers: ' + error.message
+        });
+    }
+};
+
+// Add this test function
+const testCashierEndpoint = async (req, res) => {
+    try {
+        // Create a test response
+        console.log('Test cashier endpoint accessed');
+        
+        // Return some sample data
+        res.json([
+            {
+                username: "Test Cashier",
+                email: "test@example.com",
+                password: "test-password-123",
+                tel_num: "1234567890"
+            }
+        ]);
+    } catch (error) {
+        console.error('Error in test cashier endpoint:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Test endpoint error'
+        });
+    }
+};
+
+// Update export to include the test endpoint
+export { registerCashier, loginCashier, getAllCashiers, testCashierEndpoint };

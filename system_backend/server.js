@@ -35,6 +35,12 @@ app.use(cors());
 // Serve static images
 app.use('/images', express.static('uploads'));
 
+// Add this debugging middleware before registering the routes
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // API endpoints
 app.use('/api/material', materialRouter);
 app.use('/api/user', userRouter); 
@@ -50,7 +56,7 @@ app.use('/api/order',OrderRoutes);
 app.use('/api/analytics',AnalyticsRouter);
 app.use('/api/bill', billRoutes);
 app.use('/api/custom-orders', CustomRouter);
-app.use('/api/cashier', cashierRouter);
+app.use('/api/user/cashier', cashierRouter);
 // Keep this line to ensure consistent routing
 app.use('/api/supervisors', supervisorsRouter);
 
@@ -885,5 +891,6 @@ app.get('/', (req, res) => {
 // Start the server
 app.listen(port, () => {
     console.log(`Server starting on http://localhost:${port}`);
-
+    // Check if the base URL path matches what your frontend is using
+    console.log('Cashier routes registered at: /api/user/cashier');
 });

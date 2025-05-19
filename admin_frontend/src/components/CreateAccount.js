@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Form, Button, Container, Row, Col, Card, Alert } from 'react-bootstrap';
+import { Form, Button, Container, Row, Col, Card, Alert, Table, Tabs, Tab } from 'react-bootstrap';
 
 const CreateAccount = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +18,76 @@ const CreateAccount = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Add state for storing account data
+  const [accounts, setAccounts] = useState({
+    cashiers: [],
+    supervisors: []
+  });
+
+  // Function to fetch existing accounts with improved error handling and debugging
+  const fetchAccounts = async () => {
+    try {
+      // Use the regular endpoint now
+      console.log('Fetching cashier accounts...');
+      const cashierResponse = await axios.get('http://localhost:4000/api/user/cashier/all')
+        .catch(err => {
+          console.error('Error fetching cashiers:', err.message);
+          return { data: [] };
+        });
+      
+      console.log('Cashier response:', cashierResponse);
+      
+      // Fetch supervisor accounts
+      console.log('Fetching supervisor accounts...');
+      const supervisorResponse = await axios.get('http://localhost:4000/api/supervisors/all')
+        .catch(err => {
+          console.error('Error fetching supervisor accounts:', err.message);
+          return { data: [] };
+        });
+
+      // Log detailed response information to diagnose issues
+      console.log('Cashier response:', cashierResponse);
+      console.log('Supervisor response:', supervisorResponse);
+      
+      // Map the property names to match what the tables expect
+      const supervisorData = Array.isArray(supervisorResponse.data) ? 
+        supervisorResponse.data.map(supervisor => ({
+          username: supervisor.username || supervisor.supervisor_name,
+          email: supervisor.email,
+          password: supervisor.password,
+          tel_num: supervisor.tel_num
+        })) : [];
+      
+      console.log('Processed cashier data:', cashierResponse.data);
+      console.log('Processed supervisor data:', supervisorData);
+
+      // Use test data for cashiers
+      setAccounts({
+        cashiers: cashierResponse.data || [],
+        supervisors: supervisorData
+      });
+      
+      // Clear any error feedback if the fetch was successful
+      if (feedback.type === 'danger' && feedback.message.includes('Failed to load')) {
+        setFeedback({ message: '', type: '' });
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      setFeedback({
+        message: `Failed to load existing accounts: ${error.message || 'Unknown error'}`,
+        type: 'danger'
+      });
+    }
+  };
+
+  // Load accounts when component mounts, with a small delay to ensure API is responsive
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAccounts();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -120,6 +190,9 @@ const CreateAccount = () => {
           tel_num: '',
           role: 'cashier'
         });
+        
+        // Refresh account list after successful creation
+        fetchAccounts();
       } else {
         setFeedback({
           message: response.data.message || 'Failed to create account',
@@ -142,7 +215,7 @@ const CreateAccount = () => {
       <h2 className="mb-3" style={{marginLeft:'350px', fontWeight:'bolder'}}>Account Management</h2>
       <Row className="justify-content-center g-0">
         <Col md={10}>
-          <Card className="shadow-sm border-0">
+          <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-primary text-white py-2">
               <h4 className="mb-0">Create New Account</h4>
             </Card.Header>
@@ -243,7 +316,7 @@ const CreateAccount = () => {
                       <Form.Text className="text-muted">
                         Phone number must be 10 digits.
                       </Form.Text>
-                    </Form.Group>
+                      </Form.Group>
                   </Col>
                 </Row>
                 
@@ -253,6 +326,104 @@ const CreateAccount = () => {
                   </Button>
                 </div>
               </Form>
+            </Card.Body>
+          </Card>
+
+          {/* Account Display Section */}
+          <Card className="shadow-sm border-0">
+            <Card.Header className="bg-primary text-white py-2">
+              <h4 className="mb-0">Account List</h4>
+            </Card.Header>
+            <Card.Body>
+              <Tabs defaultActiveKey="cashiers" className="mb-3">
+                <Tab eventKey="cashiers" title="Cashiers">
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Password</th>
+                        <th>Phone Number</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accounts.cashiers.length > 0 ? (
+                        accounts.cashiers.map((cashier, index) => (
+                          <tr key={cashier._id || index}>
+                            <td>{index + 1}</td>
+                            <td>{cashier.username || cashier.name || 'N/A'}</td>
+                            <td>{cashier.email || 'N/A'}</td>
+                            <td>{cashier.password || cashier.plainPassword || 'N/A'}</td>
+                            <td>{cashier.tel_num || cashier.phone || cashier.phoneNumber || 'N/A'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center">
+                            No cashier accounts found. 
+                            <Button 
+                              variant="link" 
+                              onClick={fetchAccounts}
+                              className="p-0 ms-2"
+                            >
+                              Refresh
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+                </Tab>
+                <Tab eventKey="supervisors" title="Production Managers">
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Password</th>
+                        <th>Phone Number</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accounts.supervisors.length > 0 ? (
+                        accounts.supervisors.map((supervisor, index) => (
+                          <tr key={supervisor._id || index}>
+                            <td>{index + 1}</td>
+                            <td>{supervisor.username || supervisor.name || 'N/A'}</td>
+                            <td>{supervisor.email || 'N/A'}</td>
+                            <td>{supervisor.password || supervisor.plainPassword || 'N/A'}</td>
+                            <td>{supervisor.tel_num || supervisor.phone || supervisor.phoneNumber || 'N/A'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center">
+                            No production manager accounts found. 
+                            <Button 
+                              variant="link" 
+                              onClick={fetchAccounts}
+                              className="p-0 ms-2"
+                            >
+                              Refresh
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+                </Tab>
+              </Tabs>
+              <div className="d-flex justify-content-end">
+                <Button 
+                  variant="outline-primary" 
+                  className="mt-2"
+                  onClick={fetchAccounts}
+                >
+                  Refresh Account List
+                </Button>
+              </div>
             </Card.Body>
           </Card>
         </Col>
