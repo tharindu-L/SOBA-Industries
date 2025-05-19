@@ -30,7 +30,7 @@ const registerCashier = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
         
         // Insert cashier into the database
-        const INSERT_CASHIER_QUERY = 'INSERT INTO cashiers (username, email, password, tel_num) VALUES (?, ?, ?, ?)';
+        const INSERT_CASHIER_QUERY = 'INSERT INTO cashiers (cashier_name, email, password, tel_num) VALUES (?, ?, ?, ?)';
         const [result] = await pool.query(INSERT_CASHIER_QUERY, [username, email, hashedPassword, tel_num]);
 
         const token = createToken(result.insertId);
