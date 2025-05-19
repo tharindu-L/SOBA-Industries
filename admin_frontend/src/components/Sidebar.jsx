@@ -89,7 +89,7 @@ const Sidebar = () => {
       icon: <ShoppingCartIcon />,
       hasSubmenu: true,
       items: [
-        { text: 'Normal Orders', icon: <ListAltIcon />, path: '/orders' },
+        { text: 'Standard Orders', icon: <ListAltIcon />, path: '/orders' },
         { text: 'Custom Orders', icon: <AddShoppingCartIcon />, path: '/c-orders' }
       ]
     },
