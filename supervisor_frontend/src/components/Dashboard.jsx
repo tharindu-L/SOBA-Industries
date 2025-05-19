@@ -251,7 +251,7 @@ const Dashboard = () => {
   }
 
   return (
-    <Container fluid className="dashboard-container py-4">
+    <Container fluid className="dashboard-container py-4" style={{marginLeft:'65px'}}>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="dashboard-title">Production Management Dashboard</h2>

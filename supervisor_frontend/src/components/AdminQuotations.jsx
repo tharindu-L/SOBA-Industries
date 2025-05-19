@@ -832,11 +832,11 @@ const AdminQuotations = () => {
   };
 
   return (
-    <Container fluid className="py-4" style={styles.pageContainer} >
+    <Container fluid className="py-6" style={{...styles.pageContainer, marginLeft: '75px'}} >
       <Card className="shadow-sm">
         <Card.Header className="bg-primary text-white">
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="mb-0">Job List Management</h2>
+            <h2 className="mb-0">Custom Order Management</h2>
             <div>
               <Button 
                 variant="outline-light" 
@@ -876,9 +876,9 @@ const AdminQuotations = () => {
           )}
           
           {/* Replace the existing filter panel with improved filters */}
-          <Card className="mb-4">
-            <Card.Header className="bg-light">
-              <h5 className="mb-0">
+          <Card className="mb-4" >
+            <Card.Header  style={{backgroundColor:'#1E90FF'}}>
+              <h5 className="mb-0" >
                 <FunnelFill className="me-2" />
                 Filter Jobs
               </h5>
@@ -1139,6 +1139,7 @@ const AdminQuotations = () => {
         size="lg" 
         backdrop="static"
         aria-labelledby="order-update-modal"
+        style={{marginLeft:'145px'}}
       >
         <Modal.Header closeButton className="bg-light">
           <Modal.Title id="order-update-modal">
@@ -1192,7 +1193,7 @@ const AdminQuotations = () => {
               {status === 'in_progress' && (
                 <>
                   <Card className="mb-4 border-light">
-                    <Card.Header className="bg-light">
+                    <Card.Header className="" style={{backgroundColor:'#1E90FF'}}>
                       <div className="d-flex justify-content-between align-items-center">
                         <h5 className="mb-0">Materials</h5>
                         <Button 
@@ -1200,6 +1201,12 @@ const AdminQuotations = () => {
                           size="sm"
                           onClick={addNewMaterialItem}
                           disabled={materials.length === 0}
+                          className="text-white"
+                          style={{ 
+                            borderColor: '#0d47a1',
+                            '--bs-btn-hover-bg': '#0d47a1',
+                            '--bs-btn-hover-border-color': '#0d47a1'
+                          }}
                         >
                           <Plus className="me-1" /> Add Material
                         </Button>
@@ -1294,7 +1301,7 @@ const AdminQuotations = () => {
                   </Card>
 
                   <Card className="mb-4 border-light">
-                    <Card.Header className="bg-light">
+                    <Card.Header className="" style={{backgroundColor:"#1E90FF"}}>
                       <h5 className="mb-0">Additional Charges</h5>
                     </Card.Header>
                     <Card.Body>
