@@ -9,13 +9,13 @@ import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-// Removed DescriptionIcon import as it's no longer needed
 import { jwtDecode } from 'jwt-decode';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const Sidebar = () => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,6 +36,7 @@ const Sidebar = () => {
         if (response.data && response.data.user) {
           // Use customer_name from the user object
           setUsername(response.data.user.customer_name || 'Customer');
+          setProfileImage(response.data.user.profile_image || null);
         }
         setLoading(false);
       })
@@ -95,16 +96,29 @@ const Sidebar = () => {
           backgroundColor: 'rgba(0,0,0,0.2)'
         }}>
         <Avatar 
+          src={profileImage ? `http://localhost:4000/images/${profileImage}` : undefined}
           sx={{ 
-            bgcolor: '#fff', 
+            bgcolor: profileImage ? 'transparent' : '#fff', 
             color: '#1a237e',
             width: 70, 
             height: 70, 
             mb: 1,
-            boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+            boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+            '& img': {
+              objectFit: 'cover',
+              width: '100%',
+              height: '100%'
+            }
+          }}
+          imgProps={{
+            onError: (e) => {
+              e.target.onerror = null;
+              e.target.src = '';
+              e.target.style.display = 'none';
+            }
           }}
         >
-          <ShoppingBagIcon sx={{ fontSize: 40 }} />
+          {!profileImage && <ShoppingBagIcon sx={{ fontSize: 40 }} />}
         </Avatar>
         
         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.2rem' }}>
