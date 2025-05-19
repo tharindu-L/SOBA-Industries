@@ -336,6 +336,27 @@ const updateCustomOrderStatus = async (req, res) => {
   }
 };
 
+// Get all supervisors for admin panel
+const getAllSupervisors = async (req, res) => {
+  try {
+    console.log('Fetching all supervisors');
+    
+    // Get supervisor data including passwords (only for admin panel)
+    const [supervisors] = await pool.query(
+      'SELECT SupervisorID, supervisor_name as username, email, password, tel_num FROM supervisors'
+    );
+    
+    console.log(`Retrieved ${supervisors.length} supervisors`);
+    res.json(supervisors);
+  } catch (error) {
+    console.error('Error fetching all supervisors:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching all supervisors' 
+    });
+  }
+};
+
 export { 
   registerSupervisor, 
   loginSupervisor, 
@@ -344,5 +365,6 @@ export {
   useMaterials,
   getLowStockProducts,
   getCustomOrders,
-  updateCustomOrderStatus
+  updateCustomOrderStatus,
+  getAllSupervisors
 };
