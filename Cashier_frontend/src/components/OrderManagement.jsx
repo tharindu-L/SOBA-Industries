@@ -8,6 +8,7 @@ const OrderManagement = () => {
   const [formData, setFormData] = useState({});
   const [filterOrderId, setFilterOrderId] = useState('');
   const [filterCustomerId, setFilterCustomerId] = useState('');
+  const [isAdditionalPayment, setIsAdditionalPayment] = useState(true);
 
   // Fetch all orders
   const fetchOrders = async () => {
@@ -34,6 +35,21 @@ const OrderManagement = () => {
       return;
     }
 
+    const order = orders.find(o => o.order_id === orderId);
+    if (!order) return;
+
+    const paymentAmount = parseFloat(formData[orderId]);
+    // Calculate the new amount based on selection mode
+    const newAmountPaid = isAdditionalPayment ? 
+      parseFloat(order.amount_paid || 0) + paymentAmount : 
+      paymentAmount;
+
+    // Validate payment doesn't exceed total
+    if (newAmountPaid > parseFloat(order.total_amount)) {
+      alert(`Payment cannot exceed total amount of $${order.total_amount}`);
+      return;
+    }
+
     setUpdateLoading(true);
     try {
       const response = await fetch('http://localhost:4000/api/order/update_am', {
@@ -43,7 +59,7 @@ const OrderManagement = () => {
         },
         body: JSON.stringify({
           orderId: orderId,
-          amount_paid: parseFloat(formData[orderId])
+          amount_paid: newAmountPaid
         })
       });
 
@@ -54,6 +70,11 @@ const OrderManagement = () => {
 
       await fetchOrders();
       alert('Payment updated successfully!');
+      // Clear the input after successful update
+      setFormData({
+        ...formData,
+        [orderId]: ''
+      });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -106,6 +127,40 @@ const OrderManagement = () => {
         </div>
       </div>
 
+      {/* Payment Mode Selection */}
+      <div className="mb-4">
+        <div className="flex items-center space-x-4">
+          <label className="font-medium">Payment Mode:</label>
+          <div className="flex items-center">
+            <input
+              type="radio"
+              id="additionalPayment"
+              name="paymentMode"
+              checked={isAdditionalPayment}
+              onChange={() => setIsAdditionalPayment(true)}
+              className="mr-1"
+            />
+            <label htmlFor="additionalPayment">Additional Payment</label>
+          </div>
+          <div className="flex items-center">
+            <input
+              type="radio"
+              id="setPayment"
+              name="paymentMode"
+              checked={!isAdditionalPayment}
+              onChange={() => setIsAdditionalPayment(false)}
+              className="mr-1"
+            />
+            <label htmlFor="setPayment">Set Total Payment</label>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAdditionalPayment 
+            ? "The entered amount will be added to the current paid amount" 
+            : "The entered amount will replace the current paid amount"}
+        </p>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border">
           <thead>
@@ -114,52 +169,61 @@ const OrderManagement = () => {
               <th className="py-2 px-4 border">Customer ID</th>
               <th className="py-2 px-4 border">Total Amount</th>
               <th className="py-2 px-4 border">Paid Amount</th>
+              <th className="py-2 px-4 border">Remaining</th>
               <th className="py-2 px-4 border">Payment Status</th>
               <th className="py-2 px-4 border">Update Payment</th>
             </tr>
           </thead>
           <tbody>
-            {filteredOrders.map(order => (
-              <tr key={order.order_id} className="hover:bg-gray-50">
-                <td className="py-2 px-4 border">{order.order_id}</td>
-                <td className="py-2 px-4 border">{order.customer_id}</td>
-                <td className="py-2 px-4 border">${order.total_amount}</td>
-                <td className="py-2 px-4 border">${order.amount_paid}</td>
-                <td className="py-2 px-4 border">
-                  <span className={`px-2 py-1 rounded ${
-                    order.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                    order.payment_status === 'partially_paid' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {order.payment_status}
-                  </span>
-                </td>
-                <td className="py-2 px-4 border">
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max={order.total_amount}
-                      value={formData[order.order_id] || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        [order.order_id]: e.target.value
-                      })}
-                      className="border p-1 w-24"
-                      placeholder="New amount"
-                    />
-                    <button
-                      onClick={() => handleUpdatePayment(order.order_id)}
-                      disabled={updateLoading}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                    >
-                      {updateLoading ? 'Updating...' : 'Update'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredOrders.map(order => {
+              const totalAmount = parseFloat(order.total_amount || 0);
+              const amountPaid = parseFloat(order.amount_paid || 0);
+              const remainingAmount = totalAmount - amountPaid;
+              
+              return (
+                <tr key={order.order_id} className="hover:bg-gray-50">
+                  <td className="py-2 px-4 border">{order.order_id}</td>
+                  <td className="py-2 px-4 border">{order.customer_id}</td>
+                  <td className="py-2 px-4 border">${totalAmount.toFixed(2)}</td>
+                  <td className="py-2 px-4 border">${amountPaid.toFixed(2)}</td>
+                  <td className="py-2 px-4 border">${remainingAmount.toFixed(2)}</td>
+                  <td className="py-2 px-4 border">
+                    <span className={`px-2 py-1 rounded ${
+                      amountPaid >= totalAmount ? 'bg-green-100 text-green-800' :
+                      amountPaid > 0 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {amountPaid >= totalAmount ? 'paid' :
+                       amountPaid > 0 ? 'partially_paid' : 'pending'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-4 border">
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={isAdditionalPayment ? remainingAmount : totalAmount}
+                        value={formData[order.order_id] || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          [order.order_id]: e.target.value
+                        })}
+                        className="border p-1 w-24"
+                        placeholder={isAdditionalPayment ? "Add amount" : "Set amount"}
+                      />
+                      <button
+                        onClick={() => handleUpdatePayment(order.order_id)}
+                        disabled={updateLoading}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                      >
+                        {updateLoading ? 'Updating...' : 'Update'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

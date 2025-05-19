@@ -594,26 +594,36 @@ export const updateAmountPaid = async (req, res) => {
         // 3. Validate payment amount
         if (newAmountPaid < 0 || newAmountPaid > totalAmount) {
             return res.status(400).json({ 
-                error: `Payment amount must be between 0 and LKR{totalAmount}`
+                error: `Payment amount must be between 0 and LKR ${totalAmount}`
             });
         }
 
-        // 4. Update payment and force status to 'paid'
+        // 4. Determine payment status based on amount
+        let paymentStatus;
+        if (newAmountPaid >= totalAmount) {
+            paymentStatus = 'paid';
+        } else if (newAmountPaid > 0) {
+            paymentStatus = 'partially_paid';
+        } else {
+            paymentStatus = 'pending';
+        }
+
+        // 5. Update payment with correct status
         await pool.query(
             `UPDATE orders 
             SET amount_paid = ?,
-                payment_status = 'paid'
+                payment_status = ?
             WHERE order_id = ?`,
-            [newAmountPaid, orderId]
+            [newAmountPaid, paymentStatus, orderId]
         );
 
-        // 5. Get updated order
+        // 6. Get updated order
         const [updatedOrder] = await pool.query(
             'SELECT * FROM orders WHERE order_id = ?',
             [orderId]
         );
 
-        // 6. Get order items
+        // 7. Get order items
         const [orderItems] = await pool.query(
             'SELECT * FROM order_items WHERE order_id = ?',
             [orderId]
