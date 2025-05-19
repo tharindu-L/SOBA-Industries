@@ -26,6 +26,8 @@ const CreateCustomOrder = () => {
     const [totalAmount, setTotalAmount] = useState(0);
     const [amountToPay, setAmountToPay] = useState(0);
     const [paymentProcessing, setPaymentProcessing] = useState(false);
+    // Add service charge state
+    const [serviceCharge, setServiceCharge] = useState(0);
 
     // Get tomorrow's date for the minimum date in the date picker
     const tomorrow = new Date();
@@ -47,16 +49,19 @@ const CreateCustomOrder = () => {
         'Souvenirs': 700.00
     };
 
-    // Calculate total and payment amount when quantity or item type changes
+    // Calculate total and payment amount when quantity or item type or service charge changes
     React.useEffect(() => {
         const price = itemPrices[formData.itemType] || 0;
-        const total = price * formData.quantity;
+        const subtotal = price * formData.quantity;
+        const serviceChargeAmount = parseFloat(serviceCharge) || 0;
+        const total = subtotal + serviceChargeAmount;
+        
         setTotalAmount(total);
         
         // Calculate amount to pay based on payment method
         const amount = paymentMethod === 'advance' ? total * 0.3 : total;
         setAmountToPay(amount);
-    }, [formData.itemType, formData.quantity, paymentMethod]);
+    }, [formData.itemType, formData.quantity, paymentMethod, serviceCharge]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -91,6 +96,14 @@ const CreateCustomOrder = () => {
         setDesignFiles([...e.target.files]);
     };
 
+    const handleServiceChargeChange = (e) => {
+        const value = e.target.value;
+        // Only allow positive numbers or empty string
+        if (value === '' || (parseFloat(value) >= 0 && !isNaN(parseFloat(value)))) {
+            setServiceCharge(value);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -117,6 +130,8 @@ const CreateCustomOrder = () => {
             formPayload.append('paymentMethod', paymentMethod);
             formPayload.append('totalAmount', totalAmount.toFixed(2));
             formPayload.append('amountPaid', amountToPay.toFixed(2));
+            // Add service charge
+            formPayload.append('serviceCharge', serviceCharge || '0');
             
             // Add design image if present
             if (formData.designImage) {
@@ -141,7 +156,8 @@ const CreateCustomOrder = () => {
                 totalAmount: totalAmount.toFixed(2),
                 amountPaid: amountToPay.toFixed(2),
                 hasDesignImage: !!formData.designImage,
-                designFilesCount: designFiles.length
+                designFilesCount: designFiles.length,
+                serviceCharge: serviceCharge || '0'
             });
 
             // Make the API request with the FormData
@@ -227,6 +243,23 @@ const CreateCustomOrder = () => {
                         min="1"
                         required
                     />
+                </div>
+                
+                {/* Add Service Charge field */}
+                <div className="form-group">
+                    <label>Service Charge (LKR)</label>
+                    <input
+                        type="number"
+                        name="serviceCharge"
+                        value={serviceCharge}
+                        onChange={handleServiceChargeChange}
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter additional service charge if any"
+                    />
+                    <small className="form-text text-muted">
+                        Optional: Add any additional service charges
+                    </small>
                 </div>
                 
                 <div className="form-group">
@@ -316,6 +349,16 @@ const CreateCustomOrder = () => {
                     
                     <div className="form-group payment-summary">
                         <div className="summary-item">
+                            <span>Base Amount:</span>
+                            <span>${(totalAmount - parseFloat(serviceCharge || 0)).toFixed(2)}</span>
+                        </div>
+                        {parseFloat(serviceCharge) > 0 && (
+                            <div className="summary-item">
+                                <span>Service Charge:</span>
+                                <span>${parseFloat(serviceCharge).toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="summary-item highlight">
                             <span>Total Amount:</span>
                             <span>${totalAmount.toFixed(2)}</span>
                         </div>

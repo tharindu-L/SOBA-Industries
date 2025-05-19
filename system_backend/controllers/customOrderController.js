@@ -54,7 +54,9 @@ export const createCustomOrderRequest = async (req, res) => {
         // Add payment information - change variable name to match field
         paymentMethod, // We'll still use this variable name in our code
         totalAmount: reqTotalAmount,
-        amountPaid: reqAmountPaid
+        amountPaid: reqAmountPaid,
+        // Add service charge
+        serviceCharge
     } = req.body;
     
     // Validate required fields
@@ -91,7 +93,10 @@ export const createCustomOrderRequest = async (req, res) => {
         }
 
         const unitPrice = ITEM_PRICES[dbItemType];
-        const calculatedTotalAmount = unitPrice * parseInt(quantity);
+        const baseAmount = unitPrice * parseInt(quantity);
+        // Add service charge to calculation
+        const serviceChargeAmount = parseFloat(serviceCharge) || 0;
+        const calculatedTotalAmount = baseAmount + serviceChargeAmount;
         
         // Use the provided total amount or calculate it
         const totalAmount = reqTotalAmount ? parseFloat(reqTotalAmount) : calculatedTotalAmount;
@@ -117,21 +122,24 @@ export const createCustomOrderRequest = async (req, res) => {
             requestId, customerName, description, dbItemType,
             designImage, quantity, unitPrice, totalAmount,
             specialNotes, formattedWantDate,
-            paymentMethod, paymentStatus, amountPaid
+            paymentMethod, paymentStatus, amountPaid,
+            serviceCharge: serviceChargeAmount
         });
 
-        // Update the column names to match the database schema
+        // Update the column names to match the database schema and add service_charge
         await connection.query(
             `INSERT INTO custom_order_requests (
                 request_id, customer_name, description, item_type, 
                 design_image, quantity, unit_price, total_amount,
-                special_notes, want_date, payment_option, payment_status, amount_paid
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                special_notes, want_date, payment_option, payment_status, amount_paid,
+                service_charge
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 requestId, customerName, description, dbItemType,
                 designImage, quantity, unitPrice, totalAmount,
                 specialNotes || null, formattedWantDate,
-                paymentMethod || 'full', paymentStatus, amountPaid
+                paymentMethod || 'full', paymentStatus, amountPaid,
+                serviceChargeAmount
             ]
         );
 
@@ -164,6 +172,7 @@ export const createCustomOrderRequest = async (req, res) => {
                 designImage,
                 quantity,
                 unitPrice,
+                serviceCharge: serviceChargeAmount,
                 totalAmount,
                 specialNotes,
                 wantDate: formattedWantDate,
@@ -212,7 +221,7 @@ export const getCustomOrderRequests = async (req, res) => {
     try {
         connection = await pool.getConnection();
         
-        // Update SQL query to use payment_option instead of payment_method
+        // Update SQL query to include service_charge
         const [requests] = await connection.query(`
             SELECT 
                 request_id as requestId,
@@ -222,6 +231,7 @@ export const getCustomOrderRequests = async (req, res) => {
                 design_image as designImage,
                 quantity,
                 CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
+                CAST(service_charge AS DECIMAL(10,2)) as serviceCharge,
                 CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
                 status,
                 DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
@@ -257,7 +267,7 @@ export const getAllCustomOrders = async (req, res) => {
     // Add some debug logging
     console.log("Fetching all custom orders from custom_order_requests table");
     
-    // Update the SQL query to fetch payment_option instead of payment_method
+    // Update the SQL query to include service_charge
     const [orders] = await pool.query(
       `SELECT 
         request_id as requestId, 
@@ -267,6 +277,7 @@ export const getAllCustomOrders = async (req, res) => {
         design_image as designImage,
         quantity,
         CAST(unit_price AS DECIMAL(10,2)) as unitPrice,
+        CAST(service_charge AS DECIMAL(10,2)) as serviceCharge,
         CAST(total_amount AS DECIMAL(10,2)) as totalAmount,
         status,
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
