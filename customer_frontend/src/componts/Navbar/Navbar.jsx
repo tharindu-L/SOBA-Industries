@@ -139,7 +139,8 @@ const CustomNavbar = ({ isHomePage }) => {
     localStorage.removeItem('token');
     setIsAuthenticated(false);
     setIsDropdownOpen(false);
-    window.location.reload(); // Refresh the page after logout
+    // Instead of reloading, navigate to home page
+    navigate('/');
   };
 
   const handleImageClick = (image) => {
@@ -188,9 +189,6 @@ const CustomNavbar = ({ isHomePage }) => {
                   onMouseLeave={() => setIsDropdownOpen(false)}
                 />
                 <div ref={dropdownRef} className={`dropdown-menu-custom ${isDropdownOpen ? 'show' : ''}`}>
-                  <div className="dropdown-item" onClick={() => navigate('/profile')}>
-                    My Profile
-                  </div>
                   <div className="dropdown-item" onClick={() => navigate('/dashboard/quotations')}>
                     My Dashboard
                   </div>
