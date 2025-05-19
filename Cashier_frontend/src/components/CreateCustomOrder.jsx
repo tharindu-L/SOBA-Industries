@@ -11,7 +11,7 @@ const CreateCustomOrder = () => {
     const [formData, setFormData] = useState({
         customerName: '',
         description: '',
-        itemType: 'medal',
+        itemType: 'Medals', // Changed from 'medal' to 'Medals'
         quantity: 1,
         designImage: null,
         specialNotes: '',
@@ -36,15 +36,15 @@ const CreateCustomOrder = () => {
         { value: 'Medals', label: 'Medals' },
         { value: 'Badges', label: 'Badges' },
         { value: 'Mugs', label: 'Mugs' },
-        { value: 'Other', label: 'Other' }
+        { value: 'Souvenirs', label: 'Souvenirs' }  // Changed from 'Other' to 'Souvenirs'
     ];
 
     // Price mapping for item types
     const itemPrices = {
-        'Medals': 15.00,
-        'Badges': 10.00,
-        'Mugs': 8.00,
-        'Other': 20.00
+        'Medals': 450.00,
+        'Badges': 50.00,
+        'Mugs': 500.00,
+        'Souvenirs': 700.00
     };
 
     // Calculate total and payment amount when quantity or item type changes
