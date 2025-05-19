@@ -872,6 +872,158 @@ app.get('/api/db/migrate/add-service-charge', async (req, res) => {
   }
 });
 
+// Add a comprehensive migration endpoint for custom orders table
+app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
+  try {
+    console.log('Running migrations for custom_order_requests payment columns');
+    
+    // Check which columns need to be added
+    const [columns] = await pool.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'custom_order_requests'
+    `);
+    
+    // Get list of existing column names
+    const existingColumns = columns.map(col => col.COLUMN_NAME.toLowerCase());
+    const additions = [];
+    
+    // Check for each column and add it if missing
+    if (!existingColumns.includes('service_charge')) {
+      await pool.query(`
+        ALTER TABLE custom_order_requests
+        ADD COLUMN service_charge DECIMAL(10,2) DEFAULT 0 NOT NULL
+        AFTER total_amount
+      `);
+      additions.push('service_charge');
+    }
+    
+    if (!existingColumns.includes('payment_method')) {
+      await pool.query(`
+        ALTER TABLE custom_order_requests
+        ADD COLUMN payment_method VARCHAR(50) DEFAULT 'Full' NOT NULL
+      `);
+      additions.push('payment_method');
+    }
+    
+    if (!existingColumns.includes('amount_paid')) {
+      await pool.query(`
+        ALTER TABLE custom_order_requests
+        ADD COLUMN amount_paid DECIMAL(10,2) DEFAULT 0 NOT NULL
+      `);
+      additions.push('amount_paid');
+    }
+    
+    if (!existingColumns.includes('payment_status')) {
+      await pool.query(`
+        ALTER TABLE custom_order_requests
+        ADD COLUMN payment_status VARCHAR(50) DEFAULT 'pending' NOT NULL
+      `);
+      additions.push('payment_status');
+    }
+    
+    if (additions.length > 0) {
+      res.json({ 
+        success: true, 
+        message: `Added the following columns: ${additions.join(', ')}` 
+      });
+    } else {
+      res.json({ 
+        success: true, 
+        message: 'All required columns already exist in the table' 
+      });
+    }
+  } catch (error) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ success: false, message: 'Migration failed', error: error.message });
+  }
+});
+
+// Add endpoint to create custom order requests directly
+app.post('/api/custom-orders', async (req, res) => {
+  try {
+    console.log('Creating new custom order request');
+    const {
+      customerName,
+      description,
+      itemType,
+      quantity,
+      specialNotes,
+      wantDate,
+      paymentMethod,
+      totalAmount,
+      amountPaid,
+      serviceCharge
+    } = req.body;
+
+    // Handle file upload
+    let designImagePath = null;
+    if (req.files && req.files.designImage) {
+      const file = req.files.designImage;
+      const uploadPath = path.join(__dirname, 'uploads', file.name);
+      await file.mv(uploadPath);
+      designImagePath = `/uploads/${file.name}`;
+    }
+
+    // Generate a unique request ID (e.g., REQ-12345)
+    const requestId = `REQ-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Insert into database
+    const [result] = await pool.query(
+      `INSERT INTO custom_order_requests (
+        request_id, 
+        customer_name, 
+        description, 
+        item_type, 
+        design_image, 
+        quantity, 
+        unit_price, 
+        total_amount,
+        service_charge,
+        status, 
+        want_date, 
+        special_notes,
+        payment_method,
+        amount_paid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        requestId,
+        customerName,
+        description,
+        itemType,
+        designImagePath,
+        quantity,
+        totalAmount / quantity,  // Unit price calculation
+        totalAmount,
+        serviceCharge || 0,
+        'pending',
+        wantDate,
+        specialNotes || '',
+        paymentMethod,
+        amountPaid
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Custom order request created successfully',
+      orderRequest: {
+        requestId,
+        customerName,
+        totalAmount,
+        amountPaid
+      }
+    });
+  } catch (error) {
+    console.error('Error creating custom order request:', error);
+    res.status(500).json({
+      success: false,
+      message: `Error creating custom order request: ${error.message}`
+    });
+  }
+});
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {
