@@ -197,7 +197,7 @@ const AddMaterial = () => {
             </Grid>
 
             {/* Image Upload */}
-            <Grid item xs={12}>
+            {/* <Grid item xs={12}>
               <Button
                 variant="contained"
                 component="label"
@@ -222,7 +222,7 @@ const AddMaterial = () => {
                   accept="image/*"
                 />
               </Button>
-            </Grid>
+            </Grid> */}
 
             {/* Image Previews */}
             <Grid item xs={12}>

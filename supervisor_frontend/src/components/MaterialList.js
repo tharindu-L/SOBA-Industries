@@ -185,7 +185,7 @@ const MaterialList = () => {
             <Table sx={{ minWidth: 650 }}>
               <TableHead sx={{ backgroundColor: '#3f51b5' }}>
                 <TableRow>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Image</TableCell>
+                  {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>Image</TableCell> */}
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Item ID</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Item Name</TableCell>
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Quantity</TableCell>
@@ -211,7 +211,7 @@ const MaterialList = () => {
                         backgroundColor: isLowStock(material) ? 'rgba(255, 235, 238, 0.5)' : 'inherit'
                       }}
                     >
-                      <TableCell>
+                      {/* <TableCell>
                         {material.image ? (
                           <Box 
                             sx={{ 
@@ -244,7 +244,7 @@ const MaterialList = () => {
                             No Image
                           </Box>
                         )}
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell>{material.itemId}</TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{material.itemName}</TableCell>
                       <TableCell>{material.availableQty}</TableCell>
