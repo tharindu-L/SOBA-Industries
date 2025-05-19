@@ -29,7 +29,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import WorkIcon from '@mui/icons-material/Work';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'; // Added new icon for custom orders
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import InventoryIcon from '@mui/icons-material/Inventory';
+ // Added new icon for custom orders
 import axios from 'axios';
 
 const Sidebar = () => {
@@ -87,11 +90,11 @@ const Sidebar = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Add Material', icon: <AddCircleIcon />, path: '/add-material' },
-    { text: 'List Material', icon: <FormatListBulletedIcon />, path: '/list-material' },
-    { text: 'Add Products', icon: <PersonAddIcon />, path: '/Add-products' },
-    { text: 'List Products', icon: <PeopleIcon />, path: '/list-products' },
-    { text: 'Job List', icon: <WorkIcon />, path: '/job-list' },
-    { text: 'Normal Orders', icon: <WorkIcon />, path: '/n-orders' },
+    { text: 'List Material', icon: <InventoryIcon />, path: '/list-material' },
+    { text: 'Add Products', icon: <AddCircleIcon />, path: '/Add-products' },
+    { text: 'List Products', icon: <ShoppingBagIcon />, path: '/list-products' },
+    { text: 'Custom Orders', icon: <WorkIcon />, path: '/job-list' },
+    { text: 'Standard Orders', icon: <WorkIcon />, path: '/n-orders' },
     { text: 'Cashier Custom Orders', icon: <ShoppingCartIcon />, path: '/custom-orders' }, // Added new menu item
   ];
 

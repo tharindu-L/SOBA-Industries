@@ -1,5 +1,6 @@
-import { Alert, Badge, Button, Form, Modal, Spinner, Table, Card, Row, Col, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Alert, Badge, Button, Form, Modal, Spinner, Table, Card, Row, Col, ButtonGroup, InputGroup, Container } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
+import { ArrowClockwise, FunnelFill } from 'react-bootstrap-icons';
 
 const styles = {
   pageContainer: {
@@ -31,6 +32,16 @@ const styles = {
   itemDetails: {
     color: '#666',
     fontSize: '0.9rem'
+  },
+  cardBody: {
+    padding: '0.75rem' // Reduce card body padding to match AdminQuotations.jsx
+  },
+  descriptionCell: {
+    maxWidth: '150px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    cursor: 'help'
   }
 };
 
@@ -213,208 +224,246 @@ const OrderManagement = () => {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="mb-4">Order Management</h2>
-      
-      {/* Add filter controls */}
-      <Card className="mb-4">
-        <Card.Header>
-          <h5 className="mb-0">Filter Orders</h5>
-        </Card.Header>
-        <Card.Body>
-          <Row className="g-3">
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Status Filter</Form.Label>
-                <Form.Select 
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Payment Filter</Form.Label>
-                <Form.Select 
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value)}
-                >
-                  <option value="all">All Payment Statuses</option>
-                  <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
-                  <option value="failed">Failed</option>
-                  <option value="refunded">Refunded</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Search by Order/Customer ID</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="text"
-                    placeholder="Enter order or customer ID"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <Button 
-                      variant="outline-secondary"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </InputGroup>
-              </Form.Group>
-            </Col>
-          </Row>
-          
-          <div className="d-flex justify-content-between align-items-center mt-3">
-            <div>
-              <small className="text-muted">
-                Showing {filteredOrders.length} of {orders.length} orders
-              </small>
-            </div>
+    <Container fluid className="py-6" style={{...styles.pageContainer, marginLeft: '75px'}} >
+      <Card className="shadow-sm">
+        <Card.Header className="bg-primary text-white">
+          <div className="d-flex justify-content-between align-items-center">
+            <h2 className="mb-0">Standard Order Management</h2>
             <div>
               <Button 
-                variant="outline-secondary" 
-                size="sm" 
-                onClick={clearFilters}
-                disabled={statusFilter === 'all' && paymentFilter === 'all' && !searchQuery}
+                variant="outline-light" 
+                size="sm"
+                onClick={fetchOrders}
+                disabled={loading}
+                className="d-flex align-items-center"
               >
-                Clear All Filters
+                <ArrowClockwise className="me-1" />
+                {loading ? (
+                  <Spinner animation="border" size="sm" />
+                ) : (
+                  'Refresh Orders'
+                )}
               </Button>
             </div>
           </div>
+        </Card.Header>
+        <Card.Body style={styles.cardBody}>
+          {/* Filter card */}
+          <Card className="mb-4 shadow-sm">
+            <Card.Header style={{backgroundColor: '#1E90FF'}}>
+              <h5 className="mb-0 text-white">
+              <FunnelFill className="me-2" />
+              Filter Orders</h5>
+            </Card.Header>
+            <Card.Body style={styles.cardBody}>
+              <Row className="g-3">
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Status Filter</Form.Label>
+                    <Form.Select 
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Payment Filter</Form.Label>
+                    <Form.Select 
+                      value={paymentFilter}
+                      onChange={(e) => setPaymentFilter(e.target.value)}
+                    >
+                      <option value="all">All Payment Statuses</option>
+                      <option value="paid">Paid</option>
+                      <option value="pending">Pending</option>
+                      <option value="failed">Failed</option>
+                      <option value="refunded">Refunded</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Search by Order/Customer ID</Form.Label>
+                    <InputGroup>
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter order or customer ID"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      {searchQuery && (
+                        <Button 
+                          variant="outline-secondary"
+                          onClick={() => setSearchQuery('')}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                  <small className="text-muted">
+                    Showing {filteredOrders.length} of {orders.length} orders
+                  </small>
+                </div>
+                <div>
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    disabled={statusFilter === 'all' && paymentFilter === 'all' && !searchQuery}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+
+          {/* Error handling */}
+          {error && (
+            <Alert variant="danger" className="my-4">
+              Error: {error}
+            </Alert>
+          )}
+          
+          {/* Loading state */}
+          {loading ? (
+            <div className="text-center my-5">
+              <Spinner animation="border" variant="primary" />
+              <p>Loading orders...</p>
+            </div>
+          ) : (
+            <div style={styles.tableContainer}>
+              <Table striped bordered hover responsive style={styles.wideTable} className="align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Customer ID</th>
+                    <th>Order Date</th>
+                    <th>Total Amount</th>
+                    <th>Payment Status</th>
+                    <th>Payment Method</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                    <th>Items</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.map(order => (
+                    <tr key={order.order_id}>
+                      <td>{order.order_id}</td>
+                      <td>{order.customer_id}</td>
+                      <td>{new Date(order.order_date).toLocaleString()}</td>
+                      <td>LKR {order.total_amount}</td>
+                      <td><PaymentBadge status={order.payment_status} /></td>
+                      <td><PaymentMethodBadge method={order.payment_method} /></td>
+                      <td>LKR {order.amount_paid}</td>
+                      <td><StatusBadge status={order.current_status} /></td>
+                      <td>
+                      <ul style={styles.itemsList}>
+                          {order.items.map(item => (
+                            <li key={item.order_item_id} style={styles.itemRow}>
+                              <div style={styles.itemName}>
+                                {item.product_name || `Product #${item.product_id}`}
+                              </div>
+                              <div style={styles.itemDetails}>
+                                Qty: {item.quantity} × LKR {item.unit_price} = LKR {(item.quantity * item.unit_price).toFixed(2)}
+                              </div>
+                            </li>
+                        ))}
+                      </ul>
+                      </td>
+                      <td>
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={() => {
+                            setCurrentOrder(order);
+                            setNewStatus(order.current_status);
+                            setShowModal(true);
+                          }}
+                        >
+                          Update Status
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {filteredOrders.length === 0 && (
+                    <tr>
+                      <td colSpan="10" className="text-center py-4">
+                        {orders.length === 0 ? (
+                          "No orders found in the system"
+                        ) : (
+                          "No orders match the selected filters"
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          )}
         </Card.Body>
       </Card>
-
-      {/* Error handling */}
-      {error && (
-        <Alert variant="danger" className="my-4">
-          Error: {error}
-        </Alert>
-      )}
       
-      {/* Loading state */}
-      {loading ? (
-        <div className="text-center my-5">
-          <Spinner animation="border" />
-          <p>Loading orders...</p>
-        </div>
-      ) : (
-        <div style={styles.tableContainer}>
-          <Table striped bordered hover responsive style={styles.wideTable}>
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer ID</th>
-                <th>Order Date</th>
-                <th>Total Amount</th>
-                <th>Payment Status</th>
-                <th>Payment Method</th>
-                <th>Amount Paid</th>
-                <th>Status</th>
-                <th>Items</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map(order => (
-                <tr key={order.order_id}>
-                  <td>{order.order_id}</td>
-                  <td>{order.customer_id}</td>
-                  <td>{new Date(order.order_date).toLocaleString()}</td>
-                  <td>LKR {order.total_amount}</td>
-                  <td><PaymentBadge status={order.payment_status} /></td>
-                  <td><PaymentMethodBadge method={order.payment_method} /></td>
-                  <td>LKR {order.amount_paid}</td>
-                  <td><StatusBadge status={order.current_status} /></td>
-                  <td>
-                  <ul style={styles.itemsList}>
-                        {order.items.map(item => (
-                          <li key={item.order_item_id} style={styles.itemRow}>
-                            <div style={styles.itemName}>
-                              {item.product_name || `Product #${item.product_id}`}
-                            </div>
-                            <div style={styles.itemDetails}>
-                              Qty: {item.quantity} × LKR {item.unit_price} = LKR {(item.quantity * item.unit_price).toFixed(2)}
-                            </div>
-                          </li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td>
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm"
-                      onClick={() => {
-                        setCurrentOrder(order);
-                        setNewStatus(order.current_status);
-                        setShowModal(true);
-                      }}
-                    >
-                      Update Status
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              
-              {filteredOrders.length === 0 && (
-                <tr>
-                  <td colSpan="10" className="text-center py-4">
-                    {orders.length === 0 ? (
-                      "No orders found in the system"
-                    ) : (
-                      "No orders match the selected filters"
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        </div>
-      )}
-      
-      {/* Status Update Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
+      {/* Status Update Modal with updated styling */}
+      <Modal 
+        show={showModal} 
+        onHide={() => setShowModal(false)} 
+        backdrop="static"
+        size="lg"
+        style={{marginLeft:'145px'}}
+      >
+        <Modal.Header closeButton className="bg-light">
           <Modal.Title>Update Order Status</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Current Status</Form.Label>
-              <Form.Control 
-                plaintext 
-                readOnly 
-                value={currentOrder?.current_status} 
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>New Status</Form.Label>
-              <Form.Select 
-                value={newStatus} 
-                onChange={(e) => setNewStatus(e.target.value)}
-              >
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-              </Form.Select>
-            </Form.Group>
+            <Card className="mb-4 border-light">
+              <Card.Header style={{backgroundColor:'#1E90FF'}}>
+                <h5 className="mb-0 text-white">Order Information</h5>
+              </Card.Header>
+              <Card.Body style={styles.cardBody}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Current Status</Form.Label>
+                  <Form.Control 
+                    plaintext 
+                    readOnly 
+                    value={currentOrder?.current_status} 
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>New Status</Form.Label>
+                  <Form.Select 
+                    value={newStatus} 
+                    onChange={(e) => setNewStatus(e.target.value)}
+                  >
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </Form.Select>
+                </Form.Group>
+              </Card.Body>
+            </Card>
           </Form>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="bg-light">
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cancel
           </Button>
@@ -432,7 +481,16 @@ const OrderManagement = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+      
+      <style jsx>{`
+        .cursor-pointer {
+          cursor: pointer;
+        }
+        .table-responsive {
+          overflow-x: auto;
+        }
+      `}</style>
+    </Container>
   );
 };
 export default OrderManagement;
