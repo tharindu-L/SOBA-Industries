@@ -5,10 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Price configuration
 const ITEM_PRICES = {
-    medal: 15.00,
-    batch: 10.00,
-    mug: 8.00,
-    souvenir: 20.00
+    medal: 450.00,
+    batch: 50.00,
+    mug: 500.00,
+    souvenir: 700.00
 };
 
 // Function to get the next sequential custom order ID
@@ -78,7 +78,7 @@ export const createCustomOrderRequest = async (req, res) => {
             'Medals': 'medal',
             'Badges': 'batch',
             'Mugs': 'mug',
-            'Other': 'souvenir'
+            'Souvenirs': 'souvenir'  // Changed from 'Other' to 'Souvenirs'
         };
         
         const dbItemType = itemTypeMap[itemType] || 'souvenir';
