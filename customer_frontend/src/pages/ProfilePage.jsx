@@ -31,7 +31,7 @@ const ProfilePage = () => {
       setToken(savedToken);
     } else {
       alert('You are not authorized. Please login again.');
-      navigate('/login'); // Redirect to login if no token found
+      navigate('/'); // Redirect to login if no token found
     }
   }, [navigate]);
 
