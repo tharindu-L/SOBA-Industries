@@ -50,6 +50,9 @@ const MaterialList = () => {
     axios
       .get('http://localhost:4000/api/material/get')
       .then((response) => {
+        // Log the first material to see its structure
+        console.log('Material data example:', response.data.materials[0]);
+        
         // Make sure each material has a preorder_level, default to 10 if not set
         const materialsWithPreorderLevel = response.data.materials.map(material => ({
           ...material,
@@ -132,13 +135,17 @@ const MaterialList = () => {
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={{
+      width: '100%',
       padding: '20px',
       display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      minHeight: 'calc(100vh - 80px)'
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+      minHeight: 'calc(100vh - 80px)',
+      marginLeft: '70px'
     }}>
+    
       <Paper 
         elevation={3} 
         className="material-list-container"
@@ -158,7 +165,8 @@ const MaterialList = () => {
             color: '#283593',
             textAlign: 'center',
             borderBottom: '2px solid #3f51b5',
-            paddingBottom: '10px'
+            paddingBottom: '10px',
+            
           }}
         >
           Material Inventory
@@ -204,7 +212,7 @@ const MaterialList = () => {
                       }}
                     >
                       <TableCell>
-                        {material.images && material.images.length > 0 ? (
+                        {material.image ? (
                           <Box 
                             sx={{ 
                               width: 80, 
@@ -215,7 +223,7 @@ const MaterialList = () => {
                             }}
                           >
                             <img
-                              src={`http://localhost:4000/images/${material.images[0]}`}
+                              src={`http://localhost:4000/images/${material.image}`}
                               alt={material.itemName}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
@@ -261,7 +269,12 @@ const MaterialList = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: 1,
+                          width: 'fit-content'
+                        }}>
                           <Button
                             variant="contained"
                             size="small"
@@ -269,7 +282,8 @@ const MaterialList = () => {
                             onClick={() => handleUpdateOpen(material)}
                             sx={{ 
                               bgcolor: '#3f51b5',
-                              '&:hover': { bgcolor: '#303f9f' }
+                              '&:hover': { bgcolor: '#303f9f' },
+                              width: '100%'
                             }}
                           >
                             Edit
@@ -281,7 +295,8 @@ const MaterialList = () => {
                             onClick={() => handleDelete(material.itemId)}
                             sx={{ 
                               bgcolor: '#f44336',
-                              '&:hover': { bgcolor: '#d32f2f' }
+                              '&:hover': { bgcolor: '#d32f2f' },
+                              width: '100%'
                             }}
                           >
                             Delete
