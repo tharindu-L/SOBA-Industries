@@ -10,6 +10,18 @@ const createToken = (id) => {
 const registerAdmin = async (req, res) => {
     const { username, email, password } = req.body;
     try {
+        // Create the admins table if it doesn't exist
+        const CREATE_TABLE_QUERY = `
+            CREATE TABLE IF NOT EXISTS admins (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
+        await pool.query(CREATE_TABLE_QUERY);
+
         const SELECT_ADMIN_QUERY = 'SELECT * FROM admins WHERE email = ?';
         const [existingAdmins] = await pool.query(SELECT_ADMIN_QUERY, [email]);
 
@@ -43,6 +55,18 @@ const registerAdmin = async (req, res) => {
 const loginAdmin = async (req, res) => {
     const { email, password } = req.body;
     try {
+        // Ensure the table exists
+        const CREATE_TABLE_QUERY = `
+            CREATE TABLE IF NOT EXISTS admins (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
+        await pool.query(CREATE_TABLE_QUERY);
+
         const SELECT_ADMIN_QUERY = 'SELECT * FROM admins WHERE email = ?';
         const [rows] = await pool.query(SELECT_ADMIN_QUERY, [email]);
 
