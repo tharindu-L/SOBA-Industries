@@ -14,6 +14,84 @@ const CustomOrdersList = () => {
         fetchOrders();
     }, []);
 
+    const handlePaymentSubmit = async (orderId) => {
+        if (!remainingPayment[orderId]) {
+            alert('Please enter a valid payment amount');
+            return;
+        }
+
+        setProcessingPayment(true);
+        try {
+            const order = allOrders.find(o => o.id === orderId);
+            const paymentAmount = parseFloat(remainingPayment[orderId]);
+            const remainingTotal = order.totalAmount - order.amountPaid;
+
+            if (paymentAmount <= 0 || paymentAmount > remainingTotal) {
+                alert(`Please enter a valid amount between $0.01 and $${remainingTotal.toFixed(2)}`);
+                setProcessingPayment(false);
+                return;
+            }
+
+            // Make API call to update the payment - FIXED: using requestId instead of orderId
+            const response = await axios.post(
+                'http://localhost:4000/api/custom-orders/update-payment',
+                {
+                    requestId: orderId, // FIXED: Changed from orderId to requestId
+                    paymentAmount
+                }
+            );
+
+            if (response.data.success) {
+                alert(`Payment of $${paymentAmount.toFixed(2)} successfully processed.`);
+                // Refresh orders list
+                fetchOrders();
+                // Clear payment input
+                setRemainingPayment(prev => ({
+                    ...prev,
+                    [orderId]: ''
+                }));
+            } else {
+                alert(response.data.message || 'Failed to process payment');
+            }
+        } catch (err) {
+            console.error('Error processing payment:', err);
+            alert('Error processing payment. Please try again.');
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
+    // Add this function for the "Complete Payment" button
+    const completePartialPayment = async (order, remainingAmount) => {
+        try {
+            setProcessingPayment(true);
+            
+            console.log(`Completing payment for order ${order.id}, amount: ${remainingAmount}`);
+            
+            const response = await axios.post(
+                'http://localhost:4000/api/custom-orders/update-payment', 
+                {
+                    requestId: order.id, // Using order.id for the request
+                    paymentAmount: remainingAmount
+                }
+            );
+            
+            console.log('Payment response:', response.data);
+            
+            if (response.data.success) {
+                alert('Payment processed successfully!');
+                fetchOrders(); // Refresh orders
+            } else {
+                alert('Payment failed: ' + response.data.message);
+            }
+        } catch (error) {
+            console.error('Error processing payment:', error);
+            alert('Error processing payment: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
     const fetchOrders = async () => {
         setLoading(true);
         try {
@@ -75,53 +153,6 @@ const CustomOrdersList = () => {
             setError('Failed to load orders. Please try again.');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handlePaymentSubmit = async (orderId) => {
-        if (!remainingPayment[orderId]) {
-            alert('Please enter a valid payment amount');
-            return;
-        }
-
-        setProcessingPayment(true);
-        try {
-            const order = allOrders.find(o => o.id === orderId);
-            const paymentAmount = parseFloat(remainingPayment[orderId]);
-            const remainingTotal = order.totalAmount - order.amountPaid;
-
-            if (paymentAmount <= 0 || paymentAmount > remainingTotal) {
-                alert(`Please enter a valid amount between $0.01 and $${remainingTotal.toFixed(2)}`);
-                setProcessingPayment(false);
-                return;
-            }
-
-            // Make API call to update the payment
-            const response = await axios.post(
-                'http://localhost:4000/api/custom-orders/update-payment',
-                {
-                    orderId,
-                    paymentAmount
-                }
-            );
-
-            if (response.data.success) {
-                alert(`Payment of $${paymentAmount.toFixed(2)} successfully processed.`);
-                // Refresh orders list
-                fetchOrders();
-                // Clear payment input
-                setRemainingPayment(prev => ({
-                    ...prev,
-                    [orderId]: ''
-                }));
-            } else {
-                alert(response.data.message || 'Failed to process payment');
-            }
-        } catch (err) {
-            console.error('Error processing payment:', err);
-            alert('Error processing payment. Please try again.');
-        } finally {
-            setProcessingPayment(false);
         }
     };
 
@@ -232,25 +263,36 @@ const CustomOrdersList = () => {
                                     <td>
                                         {order.type === 'custom' && order.paymentStatus === 'partially_paid' && (
                                             <div className="payment-action">
-                                                <input
-                                                    type="number"
-                                                    min="0.01"
-                                                    step="0.01"
-                                                    placeholder="Amount"
-                                                    value={remainingPayment[order.id] || ''}
-                                                    onChange={(e) => setRemainingPayment({
-                                                        ...remainingPayment,
-                                                        [order.id]: e.target.value
-                                                    })}
-                                                    disabled={processingPayment}
-                                                />
-                                                <button
-                                                    onClick={() => handlePaymentSubmit(order.id)}
-                                                    disabled={processingPayment}
-                                                    className="complete-payment-btn"
-                                                >
-                                                    {processingPayment ? 'Processing...' : 'Complete Payment'}
-                                                </button>
+                                                <div className="payment-options">
+                                                    <button 
+                                                        className="complete-payment-btn"
+                                                        onClick={() => completePartialPayment(order, calculateRemaining(order))}
+                                                        disabled={processingPayment}
+                                                    >
+                                                        {processingPayment ? 'Processing...' : 'Pay Remaining'}
+                                                    </button>
+                                                    <div className="custom-amount">
+                                                        <input
+                                                            type="number"
+                                                            min="0.01"
+                                                            step="0.01"
+                                                            placeholder="Custom Amount"
+                                                            value={remainingPayment[order.id] || ''}
+                                                            onChange={(e) => setRemainingPayment({
+                                                                ...remainingPayment,
+                                                                [order.id]: e.target.value
+                                                            })}
+                                                            disabled={processingPayment}
+                                                        />
+                                                        <button
+                                                            onClick={() => handlePaymentSubmit(order.id)}
+                                                            disabled={processingPayment}
+                                                            className="custom-payment-btn"
+                                                        >
+                                                            {processingPayment ? 'Processing...' : 'Pay Amount'}
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                         

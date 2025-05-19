@@ -274,21 +274,30 @@ const getAllCustomOrders = async (req, res) => {
   return getCustomOrderRequests(req, res);
 };
 
-// Update order payment status
+// Update order payment status - Fixed version with proper error handling
 const updateOrderPayment = async (req, res) => {
   try {
-    const { requestId, paymentAmount, paymentStatus } = req.body;
+    // Log the request for debugging
+    console.log('Payment update request received:', req.body);
     
+    const { requestId, paymentAmount } = req.body;
+    
+    // Enhanced validation
     if (!requestId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Request ID is required' 
-      });
+      return res.status(400).json({ success: false, message: 'Request ID is required' });
     }
+    
+    if (!paymentAmount || isNaN(parseFloat(paymentAmount)) || parseFloat(paymentAmount) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid payment amount is required' });
+    }
+    
+    // Convert payment amount to a number to ensure proper calculation
+    const paymentAmountNum = parseFloat(paymentAmount);
+    console.log(`Processing payment of ${paymentAmountNum} for order ${requestId}`);
     
     // Get current order to calculate remaining amount
     const [orders] = await pool.query(
-      'SELECT total_amount, amount_paid FROM custom_order_requests WHERE request_id = ?',
+      'SELECT total_amount, amount_paid, payment_status FROM custom_order_requests WHERE request_id = ?',
       [requestId]
     );
     
@@ -300,11 +309,17 @@ const updateOrderPayment = async (req, res) => {
     }
     
     const order = orders[0];
-    const newAmountPaid = parseFloat(order.amount_paid || 0) + parseFloat(paymentAmount || 0);
+    console.log('Order found:', order);
+    
+    const totalAmount = parseFloat(order.total_amount || 0);
+    const currentPaid = parseFloat(order.amount_paid || 0);
+    const newAmountPaid = currentPaid + paymentAmountNum;
     
     // Determine if fully paid
-    const isPaid = newAmountPaid >= parseFloat(order.total_amount);
-    const newStatus = isPaid ? 'paid' : paymentStatus || 'partial';
+    const isPaid = newAmountPaid >= totalAmount;
+    const newStatus = isPaid ? 'paid' : 'partial';
+    
+    console.log(`Payment details: Total=${totalAmount}, Current paid=${currentPaid}, New total=${newAmountPaid}, Status=${newStatus}`);
     
     // Update the order
     await pool.query(
@@ -317,14 +332,14 @@ const updateOrderPayment = async (req, res) => {
       message: 'Payment updated successfully',
       isPaid,
       newAmountPaid,
-      totalAmount: order.total_amount
+      totalAmount,
+      remainingAmount: Math.max(0, totalAmount - newAmountPaid)
     });
   } catch (error) {
     console.error('Error updating payment:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating payment',
-      error: error.message
+      message: 'Error updating payment: ' + (error.message || 'Unknown error')
     });
   }
 };
