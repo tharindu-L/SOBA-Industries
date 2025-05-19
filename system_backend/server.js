@@ -833,6 +833,39 @@ app.get('/api/custom-orders/all', async (req, res) => {
   }
 });
 
+// Add a database migration endpoint to add service_charge column
+app.get('/api/db/migrate/add-service-charge', async (req, res) => {
+  try {
+    console.log('Running migration to add service_charge column to custom_order_requests table');
+    
+    // Check if column already exists
+    const [columns] = await pool.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'custom_order_requests' 
+      AND COLUMN_NAME = 'service_charge'
+    `);
+    
+    if (columns.length === 0) {
+      // Add the column if it doesn't exist
+      await pool.query(`
+        ALTER TABLE custom_order_requests
+        ADD COLUMN service_charge DECIMAL(10,2) DEFAULT 0 NOT NULL
+        AFTER total_amount
+      `);
+      console.log('Migration successful - added service_charge column');
+      res.json({ success: true, message: 'Added service_charge column to custom_order_requests table' });
+    } else {
+      console.log('Migration skipped - service_charge column already exists');
+      res.json({ success: true, message: 'Service charge column already exists' });
+    }
+  } catch (error) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ success: false, message: 'Migration failed', error: error.message });
+  }
+});
+
 // Test database connection
 app.get('/test-db', async (req, res) => {
     try {
