@@ -67,10 +67,10 @@ const Reports = () => {
   };
   
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
+    <Box sx={{ p: 3 }} marginLeft={'95px'} bgcolor={'#f4f7fc'}>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', marginLeft:'350px'} }>
         <AssessmentIcon sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
-        <Typography variant="h4" component="h1">Reports</Typography>
+        <Typography variant="h4" component="h1" >Reports</Typography>
       </Box>
       
       <Paper sx={{ mb: 4 }}>

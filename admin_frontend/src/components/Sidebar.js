@@ -222,7 +222,7 @@ const Sidebar = () => {
                   <ListItemIcon sx={{ color: 'rgba(255,255,255,0.8)', minWidth: '40px' }}>
                     <FormatListBulletedIcon />
                   </ListItemIcon>
-                  <ListItemText primary="Normal Orders" />
+                  <ListItemText primary="Standard Orders" />
                 </ListItem>
                 
                 <ListItem 

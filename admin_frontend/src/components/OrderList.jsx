@@ -187,7 +187,8 @@ const OrderList = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }} style={{marginLeft:'60px', backgroundColor:'#f4f7fc'
+    }}>
       <Paper 
         elevation={0} 
         sx={{ 
@@ -199,7 +200,7 @@ const OrderList = () => {
         {/* Header */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1" fontWeight="bold">
-            Normal Orders
+            Standard Orders
           </Typography>
           <Button 
             variant="contained" 

@@ -310,7 +310,7 @@ const InvoiceList = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }} style={{marginLeft:'65px', backgroundColor:'#f4f7fc'}}>
       <Paper 
         elevation={0} 
         sx={{ 
@@ -350,7 +350,7 @@ const InvoiceList = () => {
               Custom Order Bills
             </ToggleButton>
             <ToggleButton value="normal" aria-label="normal bills">
-              Normal Order Bills
+              Standard Order Bills
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>

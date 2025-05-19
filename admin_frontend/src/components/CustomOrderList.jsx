@@ -182,7 +182,7 @@ const resetFilters = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }}>
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 5 }} style={{marginLeft:'65px', backgroundColor:'#f4f7fc'}}>
       <Paper 
         elevation={0} 
         sx={{ 

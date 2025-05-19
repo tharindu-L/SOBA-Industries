@@ -156,7 +156,7 @@ const Dashboard = () => {
   );
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }} ref={printRef}>
+    <Container maxWidth="xl" sx={{ py: 4 }} ref={printRef} style={{marginLeft:'55px', backgroundColor:'#f4f7fc'}}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" component="h1" fontWeight="bold" color="text.primary">
           SOBA Analytics Dashboard

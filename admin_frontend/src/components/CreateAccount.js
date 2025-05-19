@@ -138,10 +138,10 @@ const CreateAccount = () => {
   };
 
   return (
-    <Container fluid className="p-0">
-      <h2 className="mb-3">Account Management</h2>
+    <Container fluid className="p-0" style={{marginLeft:'65px', backgroundColor:'#f4f7fc'}}>
+      <h2 className="mb-3" style={{marginLeft:'350px', fontWeight:'bolder'}}>Account Management</h2>
       <Row className="justify-content-center g-0">
-        <Col md={12}>
+        <Col md={10}>
           <Card className="shadow-sm border-0">
             <Card.Header className="bg-primary text-white py-2">
               <h4 className="mb-0">Create New Account</h4>
