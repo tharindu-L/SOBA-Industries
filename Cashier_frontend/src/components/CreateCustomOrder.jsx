@@ -150,6 +150,7 @@ const CreateCustomOrder = () => {
             }
 
             console.log('Submitting custom order to API...');
+            console.log('Payment method:', paymentMethod);
 
             // Make the API request with the FormData
             const response = await axios.post(
@@ -165,7 +166,16 @@ const CreateCustomOrder = () => {
             console.log('API response:', response.data);
 
             if (response.data.success) {
-                alert(`Order request created successfully! Request ID: ${response.data.orderRequest.requestId}\nPayment: LKR ${amountToPay.toFixed(2)} (${paymentMethod === 'advance' ? '30% Advance' : 'Full Payment'})`);
+                // Display the payment status correctly based on payment method
+                const paymentStatusText = paymentMethod === 'advance' 
+                    ? '30% Advance (Partially Paid)' 
+                    : 'Full Payment';
+                    
+                alert(`Order request created successfully! 
+Request ID: ${response.data.orderRequest.requestId}
+Payment: LKR ${amountToPay.toFixed(2)} (${paymentStatusText})
+${paymentMethod === 'advance' ? `Remaining: LKR ${(totalAmount - amountToPay).toFixed(2)} (Due at pickup)` : ''}`);
+                
                 navigate('/cashier-dashboard');
             } else {
                 setError(response.data.message || 'Failed to create order request');

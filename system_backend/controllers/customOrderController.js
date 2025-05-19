@@ -283,12 +283,36 @@ export const getAllCustomOrders = async (req, res) => {
         DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as createdAt,
         DATE_FORMAT(want_date, '%Y-%m-%d') as wantDate,
         special_notes as specialNotes,
-        payment_option as paymentMethod,
+        payment_method as paymentMethod,
         payment_status as paymentStatus,
-        CAST(amount_paid AS DECIMAL(10,2)) as amountPaid
+        CAST(amount_paid AS DECIMAL(10,2)) as amountPaid,
+        CAST(total_amount AS DECIMAL(10,2)) - CAST(amount_paid AS DECIMAL(10,2)) as remainingAmount
       FROM custom_order_requests
       ORDER BY created_at DESC`
     );
+
+    // Process orders to ensure payment status is correct
+    const processedOrders = orders.map(order => {
+      // Double-check payment status based on actual values
+      const totalAmount = parseFloat(order.totalAmount || 0);
+      const amountPaid = parseFloat(order.amountPaid || 0);
+      
+      // Override payment status if needed
+      if (amountPaid <= 0) {
+        order.paymentStatus = 'unpaid';
+      } else if (amountPaid < totalAmount) {
+        order.paymentStatus = 'partial';
+      } else if (amountPaid >= totalAmount) {
+        order.paymentStatus = 'paid';
+      }
+      
+      // Add a user-friendly payment status label
+      order.paymentStatusLabel = order.paymentStatus === 'partial' ? 
+        'Partially Paid' : 
+        (order.paymentStatus === 'paid' ? 'Fully Paid' : 'Unpaid');
+        
+      return order;
+    });
 
     // Add debug logging to check what's coming back
     console.log(`Retrieved ${orders.length} custom order requests`);
@@ -297,19 +321,17 @@ export const getAllCustomOrders = async (req, res) => {
         { 
           requestId: orders[0].requestId,
           customerName: orders[0].customerName,
-          itemType: orders[0].itemType,
-          createdAt: orders[0].createdAt,
-          wantDate: orders[0].wantDate,
           paymentMethod: orders[0].paymentMethod,
           paymentStatus: orders[0].paymentStatus,
-          amountPaid: orders[0].amountPaid
+          amountPaid: orders[0].amountPaid,
+          totalAmount: orders[0].totalAmount
         }
       );
     }
 
     res.status(200).json({
       success: true,
-      orders: orders
+      orders: processedOrders
     });
   } catch (err) {
     console.error("Error in getAllCustomOrders:", err);

@@ -170,9 +170,10 @@ CustomRouter.post('/', upload.single('designImage'), async (req, res) => {
       values.push(serviceCharge || 0);
     }
     
+    // Fix the payment method storage
     if (columnNames.includes('payment_method')) {
       fields.push('payment_method');
-      values.push(paymentMethod === 'advance' ? 'Partial' : 'Full');
+      values.push(paymentMethod || 'full');
     }
     
     if (columnNames.includes('amount_paid')) {
@@ -180,9 +181,15 @@ CustomRouter.post('/', upload.single('designImage'), async (req, res) => {
       values.push(amountPaid || 0);
     }
     
+    // Fix the payment status logic - set to "partial" for advance payments
     if (columnNames.includes('payment_status')) {
       fields.push('payment_status');
-      values.push(paymentMethod === 'advance' ? 'partial' : 'paid');
+      // Use correct payment status based on payment method
+      const parsedTotalAmount = parseFloat(totalAmount);
+      const parsedAmountPaid = parseFloat(amountPaid || 0);
+      // Set as 'partial' if using advance payment or the amount paid is less than total
+      const isPaid = parsedAmountPaid >= parsedTotalAmount;
+      values.push(paymentMethod === 'advance' || !isPaid ? 'partial' : 'paid');
     }
     
     // Build the SQL query with placeholders
@@ -193,12 +200,17 @@ CustomRouter.post('/', upload.single('designImage'), async (req, res) => {
     `;
     
     console.log('Executing query with fields:', fields);
+    console.log('Payment method:', paymentMethod);
+    console.log('Payment status:', paymentMethod === 'advance' ? 'partial' : 'paid');
     
     // Execute the dynamic query
     const [result] = await pool.query(query, values);
 
     console.log(`Custom order created with ID: ${requestId}`);
 
+    // Include payment status in response
+    const paymentStatus = paymentMethod === 'advance' ? 'partial' : 'paid';
+    
     res.json({
       success: true,
       message: 'Custom order request created successfully',
@@ -206,7 +218,9 @@ CustomRouter.post('/', upload.single('designImage'), async (req, res) => {
         requestId,
         customerName,
         totalAmount,
-        amountPaid: amountPaid || 0
+        amountPaid: amountPaid || 0,
+        paymentMethod,
+        paymentStatus // Include payment status in response
       }
     });
   } catch (error) {
