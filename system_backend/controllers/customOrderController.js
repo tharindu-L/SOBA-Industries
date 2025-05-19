@@ -341,14 +341,16 @@ export const getAllCustomOrders = async (req, res) => {
 
 // Add endpoint to update the payment for an order
 export const updateOrderPayment = async (req, res) => {
-  const { orderId, paymentAmount } = req.body;
+  const { requestId, paymentAmount } = req.body;
   
-  if (!orderId || !paymentAmount || isNaN(paymentAmount) || paymentAmount <= 0) {
+  if (!requestId || !paymentAmount || isNaN(parseFloat(paymentAmount)) || parseFloat(paymentAmount) <= 0) {
     return res.status(400).json({
       success: false,
       message: 'Invalid payment information'
     });
   }
+
+  console.log(`Processing payment update: Order ${requestId}, Amount ${paymentAmount}`);
 
   let connection;
   try {
@@ -358,7 +360,7 @@ export const updateOrderPayment = async (req, res) => {
     // Get current order information
     const [orderResult] = await connection.query(
       'SELECT * FROM custom_order_requests WHERE request_id = ?',
-      [orderId]
+      [requestId]
     );
 
     if (orderResult.length === 0) {
@@ -373,6 +375,8 @@ export const updateOrderPayment = async (req, res) => {
     const totalAmount = parseFloat(order.total_amount);
     const newAmountPaid = currentAmountPaid + parseFloat(paymentAmount);
 
+    console.log(`Current paid: ${currentAmountPaid}, Adding: ${paymentAmount}, New total: ${newAmountPaid}, Required: ${totalAmount}`);
+
     // Validate that we're not overpaying
     if (newAmountPaid > totalAmount) {
       return res.status(400).json({
@@ -382,26 +386,29 @@ export const updateOrderPayment = async (req, res) => {
     }
 
     // Update order with new payment amount and status
-    const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partially_paid';
+    const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partial';
     
     await connection.query(
       `UPDATE custom_order_requests 
        SET amount_paid = ?, payment_status = ? 
        WHERE request_id = ?`,
-      [newAmountPaid, newStatus, orderId]
+      [newAmountPaid, newStatus, requestId]
     );
 
     await connection.commit();
+    
+    console.log(`Payment updated successfully: ${requestId}, New status: ${newStatus}`);
 
     res.json({
       success: true,
       message: 'Payment updated successfully',
       order: {
-        orderId,
+        requestId,
         totalAmount,
         previouslyPaid: currentAmountPaid,
         newPayment: parseFloat(paymentAmount),
         totalPaid: newAmountPaid,
+        remainingAmount: totalAmount - newAmountPaid,
         newStatus
       }
     });
