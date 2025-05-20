@@ -79,7 +79,7 @@ const LoginSignup = () => {
   };
 
   return (
-    <div className="login-signup-wrapper">
+    <div className="login-signup-wrapper" style={{marginLeft:'-450px'}}>
       <div className="login-signup-card">
         <div className="card-header text-center">
           <h4>Production Manager Login</h4>

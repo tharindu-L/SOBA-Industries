@@ -5,16 +5,37 @@ import { Badge } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { jwtDecode } from 'jwt-decode';
 
+/**
+ * ShopItems Component
+ * 
+ * Displays a grid of products available for purchase.
+ * Allows users to:
+ * - View product details
+ * - Select quantity
+ * - Add products to cart
+ * - Navigate to cart
+ */
 const ShopItems = () => {
+  // State to store product data fetched from the API
   const [products, setProducts] = useState([]);
+  // Loading state for displaying loading indicator
   const [loading, setLoading] = useState(true);
+  // Error state to handle and display any fetch errors
   const [error, setError] = useState(null);
+  // State to track quantity selected for each product
   const [quantities, setQuantities] = useState({});
+  // State to track validation errors for quantity inputs
   const [quantityErrors, setQuantityErrors] = useState({});
+  // State to track total number of items in cart
   const [cartCount, setCartCount] = useState(0);
+  // State to store the current customer ID (if authenticated)
   const [customerId, setCustomerId] = useState(null);
   const navigate = useNavigate();
 
+  /**
+   * Updates the cart count badge by calculating total quantity
+   * of all items currently in the cart
+   */
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
     const count = cart.reduce((total, item) => total + item.quantity, 0);
@@ -22,7 +43,7 @@ const ShopItems = () => {
   };
 
   useEffect(() => {
-    // Check authentication first
+    // Check authentication status when component mounts
     const token = localStorage.getItem('token');
     
     // We still allow non-authenticated users to view products
@@ -38,6 +59,10 @@ const ShopItems = () => {
       }
     }
 
+    /**
+     * Fetches products from the API
+     * Sets initial quantity of 1 for each product
+     */
     const fetchProducts = async () => {
       try {
         const response = await fetch('http://localhost:4000/api/product/get');
@@ -47,6 +72,7 @@ const ShopItems = () => {
         const data = await response.json();
         if (data.success) {
           setProducts(data.products);
+          // Initialize quantity for each product to 1
           const initialQuantities = {};
           data.products.forEach(product => {
             initialQuantities[product.productId] = 1;
@@ -66,6 +92,13 @@ const ShopItems = () => {
     updateCartCount();
   }, []);
 
+  /**
+   * Handles changes to product quantity input
+   * Validates quantity against available stock
+   * 
+   * @param {string} productId - ID of the product being changed
+   * @param {string|number} value - New quantity value
+   */
   const handleQuantityChange = (productId, value) => {
     const numValue = parseInt(value);
     const product = products.find(p => p.productId === productId);
@@ -120,6 +153,15 @@ const ShopItems = () => {
     });
   };
 
+  /**
+   * Adds a product to the shopping cart
+   * - Checks authentication first
+   * - Validates quantity
+   * - Updates existing item or adds new item
+   * - Updates cart count
+   * 
+   * @param {Object} product - Product to add to cart
+   */
   const addToCart = (product) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -176,27 +218,31 @@ const ShopItems = () => {
     alert(`${quantity} ${product.name}(s) added to cart!`);
   };
 
+  // Render loading state
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.2rem', color: '#666' }}>
       Loading products...
     </div>;
   }
 
+  // Render error state
   if (error) {
     return <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.2rem', color: '#e63946' }}>
       Error: {error}
     </div>;
   }
 
+  // Render empty state
   if (products.length === 0) {
     return <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.2rem', color: '#666' }}>
       No products available
     </div>;
   }
 
+  // Main render - products grid with cart icon
   return (
     <div style={{ position: 'relative', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-      {/* Cart Icon positioned inside component on right side */}
+      {/* Shopping cart icon with item count badge - fixed position in top right */}
       <div style={{
         position: 'absolute',
         top: '20px',
@@ -218,7 +264,7 @@ const ShopItems = () => {
         </Link>
       </div>
 
-      {/* Product Grid */}
+      {/* Product Grid - Responsive layout with auto-fit columns */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -240,7 +286,7 @@ const ShopItems = () => {
               boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)'
             }
           }}>
-            {/* Product image and details */}
+            {/* Product image with fallback for missing images */}
             <div style={{ width: '50%', height: '200px', overflow: 'hidden',marginLeft:'25%' }}>
               <img 
                 src={`http://localhost:4000/images/${product.productImage}`} 
@@ -253,20 +299,25 @@ const ShopItems = () => {
               />
             </div>
             
+            {/* Product information and action section */}
             <div style={{ padding: '20px', flexGrow: 1 }}>
+              {/* Product name */}
               <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#333', fontWeight: '600' }}>
                 {product.name}
               </h3>
               
+              {/* Product category */}
               <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px', textTransform: 'capitalize' }}>
                 {product.category}
               </p>
               
+              {/* Price and stock availability section */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <p style={{ fontWeight: 'bold', color: '#e63946', fontSize: '1.3rem', margin: '0' }}>
-                  ${product.price}
+                  LKR {product.price}
                 </p>
                 
+                {/* Stock indicator - changes color based on availability */}
                 <p style={{
                   fontSize: '0.85rem',
                   margin: '0',
@@ -279,6 +330,7 @@ const ShopItems = () => {
                 </p>
               </div>
               
+              {/* Quantity selector with validation */}
               <div style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
                   <label style={{ marginRight: '10px', fontSize: '0.9rem', color: '#666' }}>
@@ -300,6 +352,7 @@ const ShopItems = () => {
                     disabled={product.stock <= 0}
                   />
                 </div>
+                {/* Error message display for quantity validation */}
                 {quantityErrors[product.productId] && (
                   <p style={{ color: '#e63946', fontSize: '0.75rem', margin: '5px 0 0 0', textAlign: 'center' }}>
                     {quantityErrors[product.productId]}
@@ -307,6 +360,7 @@ const ShopItems = () => {
                 )}
               </div>
               
+              {/* Add to Cart button - disabled when out of stock */}
               <button 
                 style={{
                   backgroundColor: product.stock > 0 ? '#4CAF50' : '#9e9e9e',

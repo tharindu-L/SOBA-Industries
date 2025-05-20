@@ -1,5 +1,6 @@
 import './MaterialList.css';
 
+// Material UI component imports for UI elements
 import {
   Box,
   Button,
@@ -23,28 +24,38 @@ import {
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 
+// Icon imports for the UI
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import WarningIcon from '@mui/icons-material/Warning';
+// HTTP client for API requests
 import axios from 'axios';
 
+// MaterialList component for displaying and managing material inventory
 const MaterialList = () => {
+  // State for storing the list of materials
   const [materials, setMaterials] = useState([]);
+  // State for tracking loading status
   const [loading, setLoading] = useState(true);
+  // State for storing error messages
   const [error, setError] = useState(null);
 
+  // States for managing the update modal
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  // Currently selected material for editing
   const [currentMaterial, setCurrentMaterial] = useState(null);
+  // Form states for update modal
   const [newQuantity, setNewQuantity] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newPreorderLevel, setNewPreorderLevel] = useState('');
 
-  // Fetch materials data from backend
+  // Effect hook to load materials when component mounts
   useEffect(() => {
     fetchMaterials();
   }, []);
 
+  // Function to fetch materials data from the backend API
   const fetchMaterials = () => {
     setLoading(true);
     axios
@@ -68,7 +79,7 @@ const MaterialList = () => {
       });
   };
 
-  // Function to delete a material
+  // Function to delete a material by its ID after user confirmation
   const handleDelete = (itemId) => {
     if (window.confirm('Are you sure you want to delete this material?')) {
       axios
@@ -85,7 +96,7 @@ const MaterialList = () => {
     }
   };
 
-  // Function to open the update modal
+  // Function to open the update modal and populate with current material data
   const handleUpdateOpen = (material) => {
     setCurrentMaterial(material);
     setNewQuantity(material.availableQty);
@@ -94,7 +105,7 @@ const MaterialList = () => {
     setShowUpdateModal(true);
   };
 
-  // Function to handle the update action
+  // Function to submit updated material data to the backend
   const handleUpdateSubmit = () => {
     if (newQuantity && newPrice) {
       axios
@@ -126,15 +137,19 @@ const MaterialList = () => {
     }
   };
 
+  // Function to close the update modal
   const handleCloseModal = () => {
     setShowUpdateModal(false);
   };
 
+  // Helper function to determine if a material is low in stock
+  // by comparing available quantity with preorder level
   const isLowStock = (material) => {
     return parseInt(material.availableQty) <= parseInt(material.preorder_level || 10);
   };
 
   return (
+    // Main container for the material list page
     <Box sx={{
       width: '100%',
       padding: '20px',
@@ -146,6 +161,7 @@ const MaterialList = () => {
       marginLeft: '70px'
     }}>
     
+      {/* Paper component to contain the material list content */}
       <Paper 
         elevation={3} 
         className="material-list-container"
@@ -157,6 +173,7 @@ const MaterialList = () => {
           backgroundColor: '#f4f7fc'
         }}
       >
+        {/* Header title for the page */}
         <Typography
           variant="h5"
           sx={{ 
@@ -172,17 +189,22 @@ const MaterialList = () => {
           Material Inventory
         </Typography>
 
+        {/* Conditional rendering based on loading and error states */}
         {loading ? (
+          // Show loading spinner while data is being fetched
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
             <CircularProgress sx={{ color: '#3f51b5' }} />
           </Box>
         ) : error ? (
+          // Show error message if data fetch failed
           <Typography color="error" align="center" sx={{ my: 4 }}>
             {error}
           </Typography>
         ) : (
+          // Material data table
           <TableContainer component={Paper} sx={{ boxShadow: '0 4px 8px rgba(0,0,0,0.1)', borderRadius: '8px' }}>
             <Table sx={{ minWidth: 650 }}>
+              {/* Table header row with column titles */}
               <TableHead sx={{ backgroundColor: '#3f51b5' }}>
                 <TableRow>
                   {/* <TableCell sx={{ color: 'white', fontWeight: 600 }}>Image</TableCell> */}
@@ -195,19 +217,23 @@ const MaterialList = () => {
                   <TableCell sx={{ color: 'white', fontWeight: 600 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
+              {/* Table body with material data rows */}
               <TableBody>
                 {materials.length === 0 ? (
+                  // Display message when no materials are found
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                       <Typography variant="body1">No materials found</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
+                  // Map through materials array to create table rows
                   materials.map((material) => (
                     <TableRow 
                       key={material.itemId}
                       sx={{ 
                         '&:hover': { backgroundColor: 'rgba(63, 81, 181, 0.05)' },
+                        // Highlight low stock items with light red background
                         backgroundColor: isLowStock(material) ? 'rgba(255, 235, 238, 0.5)' : 'inherit'
                       }}
                     >
@@ -243,13 +269,13 @@ const MaterialList = () => {
                           >
                             No Image
                           </Box>
-                        )}
-                      </TableCell> */}
+                        )} */}
                       <TableCell>{material.itemId}</TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{material.itemName}</TableCell>
                       <TableCell>{material.availableQty}</TableCell>
                       <TableCell>{material.preorder_level || 10}</TableCell>
                       <TableCell>${parseFloat(material.unitPrice).toFixed(2)}</TableCell>
+                      {/* Status indicator chip - shows low stock warning or in stock */}
                       <TableCell>
                         {isLowStock(material) ? (
                           <Chip 
@@ -268,6 +294,7 @@ const MaterialList = () => {
                           />
                         )}
                       </TableCell>
+                      {/* Action buttons for editing and deleting materials */}
                       <TableCell>
                         <Box sx={{ 
                           display: 'flex', 
@@ -275,6 +302,7 @@ const MaterialList = () => {
                           gap: 1,
                           width: 'fit-content'
                         }}>
+                          {/* Edit button */}
                           <Button
                             variant="contained"
                             size="small"
@@ -288,6 +316,7 @@ const MaterialList = () => {
                           >
                             Edit
                           </Button>
+                          {/* Delete button */}
                           <Button
                             variant="contained"
                             size="small"
@@ -311,7 +340,7 @@ const MaterialList = () => {
           </TableContainer>
         )}
 
-        {/* Update Material Dialog */}
+        {/* Modal dialog for updating material details */}
         {currentMaterial && (
           <Dialog 
             open={showUpdateModal} 
@@ -324,8 +353,10 @@ const MaterialList = () => {
               }
             }}
           >
+            {/* Dialog title bar */}
             <DialogTitle sx={{ bgcolor: '#3f51b5', color: 'white', fontWeight: 600 }}>
               Update Material Details
+              {/* Close button in the dialog header */}
               <IconButton
                 aria-label="close"
                 onClick={handleCloseModal}
@@ -339,7 +370,9 @@ const MaterialList = () => {
                 <CloseIcon />
               </IconButton>
             </DialogTitle>
+            {/* Dialog content with form fields */}
             <DialogContent sx={{ pt: 3, pb: 1, px: 3, mt: 1 }}>
+              {/* Read-only field displaying the material name */}
               <TextField
                 label="Item Name"
                 fullWidth
@@ -349,6 +382,7 @@ const MaterialList = () => {
                 margin="normal"
                 sx={{ mb: 3 }}
               />
+              {/* Input field for updating quantity */}
               <TextField
                 label="New Quantity"
                 type="number"
@@ -362,6 +396,7 @@ const MaterialList = () => {
                 }}
                 sx={{ mb: 3 }}
               />
+              {/* Input field for updating preorder level */}
               <TextField
                 label="Preorder Level"
                 type="number"
@@ -375,6 +410,7 @@ const MaterialList = () => {
                 }}
                 sx={{ mb: 3 }}
               />
+              {/* Input field for updating price */}
               <TextField
                 label="New Price ($)"
                 type="number"
@@ -389,7 +425,9 @@ const MaterialList = () => {
                 sx={{ mb: 2 }}
               />
             </DialogContent>
+            {/* Dialog action buttons */}
             <DialogActions sx={{ px: 3, pb: 3 }}>
+              {/* Cancel button */}
               <Button 
                 onClick={handleCloseModal}
                 variant="outlined"
@@ -402,6 +440,7 @@ const MaterialList = () => {
               >
                 Cancel
               </Button>
+              {/* Save changes button */}
               <Button 
                 onClick={handleUpdateSubmit}
                 variant="contained"

@@ -8,82 +8,115 @@ import {
   Paper,
   TextField,
   Typography,
-} from '@mui/material';
-import React, { useState } from 'react';
+} from '@mui/material'; // Importing Material-UI components for UI elements
+import React, { useState } from 'react'; // Importing React and useState hook for state management
 
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import axios from 'axios';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'; // Importing cloud upload icon from Material-UI
+import axios from 'axios'; // Importing axios for making HTTP requests
 
+/**
+ * AddMaterial Component
+ * This component provides a form interface to add new construction materials to the system.
+ * It handles material details input, image uploads, and sends data to the backend API.
+ */
 const AddMaterial = () => {
+  // State to manage material details using useState hook
   const [materialDetails, setMaterialDetails] = useState({
-    item_id: '',
-    item_name: '',
-    available_qty: '',
-    unit_price: '',
-    images: [],
+    item_id: '',         // Unique identifier for material
+    item_name: '',       // Name of the material
+    available_qty: '',   // Available quantity of the material
+    unit_price: '',      // Price per unit of the material
+    images: [],          // Array to store image files for the material
   });
 
+  // State to store and manage image preview URLs
   const [imagePreviews, setImagePreviews] = useState([]); // Store image previews
 
+  /**
+   * Handles changes in text field inputs
+   * Updates the materialDetails state when user types in any text field
+   * @param {Object} e - Event object containing input field data
+   */
   const handleChange = (e) => {
     setMaterialDetails({ ...materialDetails, [e.target.name]: e.target.value });
   };
 
+  /**
+   * Handles image file uploads
+   * Updates both the materialDetails.images array and imagePreviews array
+   * @param {Object} e - Event object containing file input data
+   */
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files); // Convert FileList to Array for easier manipulation
 
-    // Add new files and generate previews
+    // Add new files to existing images array and generate preview URLs
     const updatedImages = [...materialDetails.images, ...files];
     const updatedPreviews = [
       ...imagePreviews,
-      ...files.map((file) => URL.createObjectURL(file)),
+      ...files.map((file) => URL.createObjectURL(file)), // Create URL objects for preview
     ];
 
+    // Update both state variables with new data
     setMaterialDetails({ ...materialDetails, images: updatedImages });
     setImagePreviews(updatedPreviews);
   };
 
+  /**
+   * Handles removal of a selected image
+   * Removes image from both materialDetails.images and imagePreviews arrays
+   * @param {number} index - Index of image to remove
+   */
   const handleRemoveImage = (index) => {
-    // Remove selected image and its preview
+    // Remove selected image and its preview using filter method
     const updatedImages = materialDetails.images.filter((_, i) => i !== index);
     const updatedPreviews = imagePreviews.filter((_, i) => i !== index);
 
+    // Update both state variables with filtered data
     setMaterialDetails({ ...materialDetails, images: updatedImages });
     setImagePreviews(updatedPreviews);
   };
 
+  /**
+   * Handles form submission
+   * Validates input, prepares FormData, and sends POST request to backend
+   * @param {Object} e - Form submit event
+   */
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission behavior
 
+    // Destructure values from materialDetails for validation
     const { item_id, item_name, available_qty, unit_price, images } = materialDetails;
 
-    // Check if required fields are filled in
+    // Input validation - Check if required fields are filled
     if (!item_id || !item_name || !available_qty || !unit_price) {
       alert('Please fill in all required fields.');
-      return;
+      return; // Exit function if validation fails
     }
 
-    // Prepare the data to send to the backend
+    // Create FormData object for multipart/form-data submission (needed for file uploads)
     const formData = new FormData();
-    formData.append('itemId', item_id); // Match field name as expected by the backend
-    formData.append('itemName', item_name); // Match field name as expected by the backend
-    formData.append('availableQty', available_qty); // Match field name as expected by the backend
-    formData.append('unitPrice', unit_price); // Match field name as expected by the backend
+    formData.append('itemId', item_id);           // Add item ID to form data
+    formData.append('itemName', item_name);       // Add item name to form data
+    formData.append('availableQty', available_qty); // Add quantity to form data
+    formData.append('unitPrice', unit_price);     // Add price to form data
 
     // Only append images if they exist
     if (images.length > 0) {
       images.forEach((image) => {
-        formData.append('images', image);
+        formData.append('images', image); // Add each image to form data with 'images' field name
       });
     }
 
     try {
+      // Send POST request to backend API with form data
       const response = await axios.post('http://localhost:4000/api/material/add', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' }, // Set appropriate content type for file upload
       });
 
-      console.log('Material added successfully:', response.data);
-      alert('Material added successfully!');
+      console.log('Material added successfully:', response.data); // Log success response
+      alert('Material added successfully!'); // Notify user of success
+      
+      // Reset form fields after successful submission
       setMaterialDetails({
         item_id: '',
         item_name: '',
@@ -91,14 +124,17 @@ const AddMaterial = () => {
         unit_price: '',
         images: [],
       });
-      setImagePreviews([]); // Clear previews after submission
+      setImagePreviews([]); // Clear image previews after submission
     } catch (error) {
+      // Handle errors during submission
       console.error('Error adding material:', error);
       alert(error.response?.data?.message || 'Failed to add material. Please try again.');
     }
   };
 
+  // Component UI rendering starts here
   return (
+    // Outer container with styling
     <Box sx={{ 
       padding: '20px',
       display: 'flex',
@@ -108,7 +144,9 @@ const AddMaterial = () => {
       marginLeft: '85px',
       marginTop:'-25px'
     }}>
+      {/* Paper component provides the card-like container for the form */}
       <Paper elevation={3} className="add-tour-container">
+        {/* Title of the form */}
         <Typography
           variant="h5"
           gutterBottom
@@ -124,9 +162,10 @@ const AddMaterial = () => {
           Add New Material
         </Typography>
         
+        {/* Form element with submit handler */}
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            {/* Material Item ID */}
+            {/* Material Item ID input field */}
             <Grid item xs={12}>
               <TextField
                 label="Material Item ID"
@@ -143,7 +182,7 @@ const AddMaterial = () => {
               />
             </Grid>
 
-            {/* Material Name */}
+            {/* Material Name input field */}
             <Grid item xs={12}>
               <TextField
                 label="Material Name"
@@ -160,7 +199,7 @@ const AddMaterial = () => {
               />
             </Grid>
 
-            {/* Available Quantity */}
+            {/* Available Quantity input field - using xs=12 sm=6 for responsive layout */}
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Available Quantity"
@@ -178,7 +217,7 @@ const AddMaterial = () => {
               />
             </Grid>
 
-            {/* Unit Price */}
+            {/* Unit Price input field - using xs=12 sm=6 for responsive layout */}
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Unit Price"
@@ -196,7 +235,7 @@ const AddMaterial = () => {
               />
             </Grid>
 
-            {/* Image Upload */}
+            {/* Image Upload Button - Currently commented out */}
             {/* <Grid item xs={12}>
               <Button
                 variant="contained"
@@ -224,7 +263,7 @@ const AddMaterial = () => {
               </Button>
             </Grid> */}
 
-            {/* Image Previews */}
+            {/* Image Preview Container - displays uploaded images with remove option */}
             <Grid item xs={12}>
               <div className="image-preview-container">
                 {imagePreviews.map((preview, index) => (
@@ -247,7 +286,7 @@ const AddMaterial = () => {
               </div>
             </Grid>
 
-            {/* Submit Button */}
+            {/* Form Submit Button */}
             <Grid item xs={12}>
               <Button
                 variant="contained"
@@ -276,4 +315,4 @@ const AddMaterial = () => {
   );
 };
 
-export default AddMaterial;
+export default AddMaterial; // Export the component for use in other files

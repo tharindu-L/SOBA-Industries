@@ -66,14 +66,14 @@ const OrdersComponent = () => {
                     <span className={`status ${order.current_status}`}>
                       Status: {order.current_status}
                     </span>
-                    <span>Total: ${order.total_amount}</span>
+                    <span>Total: LKR {order.total_amount}</span>
                   </div>
                 </div>
                 
                 <div className="order-details">
                   <div className="payment-info">
                     <p>Payment: {order.payment_method} ({order.payment_status})</p>
-                    <p>Amount Paid: ${order.amount_paid}</p>
+                    <p>Amount Paid: LKR {order.amount_paid}</p>
                   </div>
                 </div>
 
@@ -93,8 +93,8 @@ const OrdersComponent = () => {
                         <tr key={item.order_item_id}>
                           <td>{item.product_id}</td>
                           <td>{item.quantity}</td>
-                          <td>${item.unit_price}</td>
-                          <td>${(item.quantity * item.unit_price).toFixed(2)}</td>
+                          <td>LKR {item.unit_price}</td>
+                          <td>LKR {(item.quantity * item.unit_price).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>

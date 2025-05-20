@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+// Import route modules for different parts of the application
 import AnalyticsRouter from './routes/analyticsRoutes.js';
 import CustomRouter from './routes/customOrderRoutes.js';
 import OrderRoutes from './routes/orderRoutes.js';
@@ -19,59 +20,64 @@ import reportRouter from './routes/reportRouter.js';
 import supervisorsRouter from './routes/supervisorsRouter.js';
 import userRouter from './routes/UserRouter.js';
 import cashierRouter from './routes/cashierRoutes.js';
-import PDFDocument from 'pdfkit';
-import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit'; // For generating PDF reports
+import ExcelJS from 'exceljs'; // For generating Excel reports
 
+// Convert ESM module URL to filesystem path (ES6 module compatibility)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize Express application
 const app = express();
 const port = process.env.PORT || 4000;
+
+// Serve static content from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// Middleware
+
+// Middleware for parsing JSON in request bodies and enabling CORS
 app.use(express.json());
 app.use(cors());
 
-// Serve static images
+// Serve static images from uploads directory
 app.use('/images', express.static('uploads'));
 
-// Add this debugging middleware before registering the routes
+// Debugging middleware to log all incoming requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// API endpoints
-app.use('/api/material', materialRouter);
-app.use('/api/user', userRouter); 
-app.use('/api/admin', adminRouter);
-app.use('/api/report', reportRouter);
-// Remove or comment out this line
-// app.use('/api/guides', supervisorsRouter);
-app.use('/api/quotation', quotationRouter);
-app.use('/api/product', ProductRouter);
-app.use('/api/jobs', assignRouter);
-app.use('/api/machine', machineRouter);
-app.use('/api/order',OrderRoutes);
-app.use('/api/analytics',AnalyticsRouter);
-app.use('/api/bill', billRoutes);
-app.use('/api/custom-orders', CustomRouter);
-app.use('/api/user/cashier', cashierRouter);
-// Keep this line to ensure consistent routing
-app.use('/api/supervisors', supervisorsRouter);
+// Register API routes for different modules of the application
+app.use('/api/material', materialRouter);   // Material inventory management
+app.use('/api/user', userRouter);           // User authentication and management
+app.use('/api/admin', adminRouter);         // Admin-specific functionality
+app.use('/api/report', reportRouter);       // Reports generation
+// app.use('/api/guides', supervisorsRouter); // Removed or commented out line
 
-// Add a test endpoint for the supervisors API
+app.use('/api/quotation', quotationRouter);  // Quotation management
+app.use('/api/product', ProductRouter);      // Product catalog management
+app.use('/api/jobs', assignRouter);          // Job assignments
+app.use('/api/machine', machineRouter);      // Machine management
+app.use('/api/order',OrderRoutes);           // Order processing
+app.use('/api/analytics',AnalyticsRouter);   // Analytics and dashboards
+app.use('/api/bill', billRoutes);            // Billing and invoicing
+app.use('/api/custom-orders', CustomRouter); // Custom order management
+app.use('/api/user/cashier', cashierRouter); // Cashier-specific operations
+app.use('/api/supervisors', supervisorsRouter); // Supervisor-specific operations
+
+// Test endpoint to verify supervisors API functionality
 app.get('/api/supervisors/test', (req, res) => {
   res.json({ success: true, message: 'Supervisors API is working!' });
 });
 
-// Ensure supervisors can access material APIs
+// Endpoint for supervisors to access material data
 app.get('/api/supervisors/materials', supervisorsRouter);
 
-// Make material routes available to supervisors
+// Global endpoint to fetch all materials
 app.get('/api/material/get_all', async (req, res) => {
   try {
     console.log('Server endpoint: Fetching all materials');
+    // Query the database for all materials with field name standardization
     const [materials] = await pool.query(
       'SELECT itemId as item_id, itemName as item_name, availableQty as available_qty, unitPrice as unit_price, preorder_level FROM materials'
     );
@@ -84,7 +90,7 @@ app.get('/api/material/get_all', async (req, res) => {
   }
 });
 
-// Add endpoint to get low stock materials
+// Endpoint to get materials with stock levels at or below preorder level
 app.get('/api/material/low-stock', async (req, res) => {
   try {
     const [materials] = await pool.query(
@@ -97,7 +103,8 @@ app.get('/api/material/low-stock', async (req, res) => {
   }
 });
 
-// Add endpoint to get low stock products - Fix the query to handle NULL preorder_level
+// Endpoint to get products with low stock levels
+// COALESCE handles NULL preorder_level values by defaulting to 10
 app.get('/api/product/low-stock', async (req, res) => {
   try {
     console.log('Fetching low stock products...');
@@ -112,7 +119,7 @@ app.get('/api/product/low-stock', async (req, res) => {
   }
 });
 
-// Add report endpoints specifically for inventory and sales reports
+// Advanced endpoint for generating inventory reports (materials/products)
 app.get('/api/reports/inventory/:type', async (req, res) => {
   try {
     const { type } = req.params;
@@ -123,11 +130,12 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
     let items = [];
     let summary = {};
     
+    // Handle different inventory types (materials or products)
     if (type === 'materials') {
-      // Query for materials
+      // Query for materials inventory data
       console.log('Fetching materials data...');
       
-      // Fix the column name from 'itemId' to 'item_id'
+      // Get materials with standardized column names
       const [materials] = await pool.query(
         `SELECT 
           m.item_id as id, 
@@ -146,7 +154,7 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
       
       console.log(`Found ${materials.length} materials`);
       
-      // Get inventory changes if dates are provided
+      // If date range provided, get inventory changes during that period
       if (startDate && endDate) {
         try {
           // Update quantity changes after query
@@ -168,7 +176,7 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
       
       items = materials;
       
-      // Calculate summary
+      // Calculate summary statistics for materials
       const lowStockCount = materials.filter(m => m.stockStatus === 'Low').length;
       const outOfStockCount = materials.filter(m => m.stockStatus === 'Out').length;
       
@@ -179,11 +187,11 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
       };
       
     } else if (type === 'products') {
-      // Query for products
+      // Query for product inventory data
       console.log('Fetching products data...');
       
-      // Update the query to NOT reference preorder_level since it doesn't exist
-      // Use a fixed value (10) as the minimum required quantity for all products
+      // Get products with stock status calculation 
+      // Using fixed value (10) as minimum required since preorder_level may not exist for products
       const [products] = await pool.query(
         `SELECT 
           p.product_id as id,
@@ -202,13 +210,15 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
       
       console.log(`Found ${products.length} products`);
       
-      // Get inventory changes if dates are provided
+      // If date range provided, get product usage during that period
       if (startDate && endDate) {
         try {
           console.log('Fetching product inventory changes...');
           
+          // Calculate usage for each product
           for (let product of products) {
             try {
+              // Get total quantity used for this product in the date range
               const [changes] = await pool.query(
                 `SELECT 
                   COALESCE(SUM(oi.quantity), 0) as used_quantity
@@ -248,7 +258,7 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
       
       items = products;
       
-      // Calculate summary
+      // Calculate summary statistics for products
       const lowStockCount = products.filter(p => p.stockStatus === 'Low').length;
       const outOfStockCount = products.filter(p => p.stockStatus === 'Out').length;
       
@@ -258,9 +268,11 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
         outOfStockItems: outOfStockCount
       };
     } else {
+      // Invalid inventory type requested
       return res.status(400).json({ success: false, message: 'Invalid inventory type' });
     }
     
+    // Return the inventory report data
     return res.json({ 
       success: true, 
       items,
@@ -272,12 +284,14 @@ app.get('/api/reports/inventory/:type', async (req, res) => {
   }
 });
 
+// Advanced endpoint for generating sales reports
 app.get('/api/reports/sales', async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     
     console.log(`Generating sales report from ${startDate || 'all time'} to ${endDate || 'all time'}`);
     
+    // Build date filter for SQL queries if start and end dates are provided
     let dateFilter = '';
     let dateParams = [];
     
@@ -289,6 +303,7 @@ app.get('/api/reports/sales', async (req, res) => {
     // Query for orders within date range
     console.log('Fetching orders...');
     
+    // Get regular orders with computed fields and standardized naming
     const [orders] = await pool.query(
       `SELECT 
         o.order_id as id,
@@ -318,23 +333,26 @@ app.get('/api/reports/sales', async (req, res) => {
     try {
       console.log('Checking for custom_orders table...');
       
-      // Check if custom_orders table exists
+      // Check if custom_orders table exists in database
       const [tables] = await pool.query(
         `SELECT table_name FROM information_schema.tables 
          WHERE table_schema = DATABASE() 
          AND table_name = 'custom_orders'`
       );
       
+      // If table exists, fetch custom orders
       if (tables.length > 0) {
         console.log('Fetching custom orders...');
         let customFilter = '';
         let customParams = [];
         
+        // Apply date filter if needed
         if (startDate && endDate) {
           customFilter = 'WHERE co.createdAt BETWEEN ? AND ?';
           customParams = [startDate, endDate];
         }
         
+        // Query custom orders with standardized fields
         const [customResults] = await pool.query(
           `SELECT 
             co.orderId as id,
@@ -374,6 +392,7 @@ app.get('/api/reports/sales', async (req, res) => {
     // Get top selling product
     let topProduct = 'None';
     try {
+      // Query for product with highest sales volume
       const [topProducts] = await pool.query(
         `SELECT 
           p.name as product_name,
@@ -394,6 +413,7 @@ app.get('/api/reports/sales', async (req, res) => {
       // Continue with default "None" for top product
     }
     
+    // Return sales report data
     return res.json({
       success: true,
       sales: allOrders,
@@ -410,7 +430,7 @@ app.get('/api/reports/sales', async (req, res) => {
   }
 });
 
-// Download report endpoints
+// Endpoint to download inventory report as PDF or Excel
 app.get('/api/reports/inventory/:type/download', async (req, res) => {
   try {
     const { type } = req.params;
@@ -418,10 +438,10 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
     
     console.log(`Generating downloadable ${format} inventory report for ${type}`);
     
-    // Fetch the appropriate data based on type
+    // Fetch the appropriate data based on inventory type (materials or products)
     let items = [];
     if (type === 'materials') {
-      // Materials query is correct, no changes needed
+      // Query for materials data with relevant fields
       const [materials] = await pool.query(
         `SELECT 
           item_id as id, 
@@ -433,7 +453,8 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
       );
       items = materials;
     } else if (type === 'products') {
-      // Fix the products query to use 'price' instead of 'unit_price'
+      // Query for products data with relevant fields
+      // Use 'price' column for products instead of 'unit_price'
       const [products] = await pool.query(
         `SELECT 
           product_id as id,
@@ -446,22 +467,22 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
       items = products;
     }
     
-    // Now generate the appropriate file
+    // Generate the appropriate file format (PDF or Excel)
     if (format === 'pdf') {
-      // Create a PDF document
+      // Create a PDF document for the report
       const doc = new PDFDocument({
         margin: 50,
         size: 'A4'
       });
       
-      // Set response headers for PDF
+      // Set response headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=inventory_${type}_report.pdf`);
       
       // Pipe the PDF document to the response
       doc.pipe(res);
       
-      // Add content to the PDF
+      // Add title and header content to the PDF
       doc.fontSize(25).text(`${type.charAt(0).toUpperCase() + type.slice(1)} Inventory Report`, {
         align: 'center'
       });
@@ -474,7 +495,7 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
       
       doc.moveDown(2);
       
-      // Table headers
+      // Create table headers
       const tableTop = 150;
       const columnSpacing = 20;
       doc.fontSize(12).font('Helvetica-Bold');
@@ -484,9 +505,10 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
       doc.text('Unit Price', 350, tableTop);
       doc.text('Min Required', 450, tableTop);
       
+      // Add a horizontal line under headers
       doc.moveTo(50, tableTop + 20).lineTo(550, tableTop + 20).stroke();
       
-      // Table rows
+      // Add table rows for each item
       let rowTop = tableTop + 30;
       doc.fontSize(10).font('Helvetica');
       
@@ -498,6 +520,7 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
         doc.text(item.minimumRequired.toString(), 450, rowTop);
         rowTop += 20;
         
+        // Create a new page if current page is full
         if (rowTop > 700) {  // Start a new page if we're near the bottom
           doc.addPage();
           rowTop = 50;
@@ -516,26 +539,28 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
         }
       });
       
-      // Summary section
+      // Add summary section at the end
       doc.moveDown(2);
       doc.fontSize(12).font('Helvetica-Bold').text('Summary', 50, rowTop + 20);
       doc.fontSize(10).font('Helvetica').text(`Total Items: ${items.length}`, 50, rowTop + 40);
       
+      // Calculate and add low stock count
       const lowStockCount = items.filter(item => item.currentStock <= item.minimumRequired).length;
       doc.text(`Low Stock Items: ${lowStockCount}`, 50, rowTop + 60);
       
+      // Calculate and add out-of-stock count
       const outOfStockCount = items.filter(item => item.currentStock <= 0).length;
       doc.text(`Out of Stock Items: ${outOfStockCount}`, 50, rowTop + 80);
       
-      // Finalize the PDF
+      // Finalize the PDF document
       doc.end();
       
     } else {
-      // Create an Excel workbook
+      // Create an Excel workbook for the report
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(`${type} Inventory`);
       
-      // Add headers
+      // Define columns for the worksheet
       worksheet.columns = [
         { header: 'ID', key: 'id', width: 10 },
         { header: 'Name', key: 'name', width: 30 },
@@ -545,7 +570,7 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
         { header: 'Status', key: 'status', width: 15 }
       ];
       
-      // Add rows
+      // Add rows for each inventory item
       items.forEach(item => {
         worksheet.addRow({
           id: item.id,
@@ -566,26 +591,28 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
         fgColor: { argb: 'FFD3D3D3' } // Light gray
       };
       
-      // Add a summary section
+      // Add summary section at the end of the worksheet
       worksheet.addRow([]); // Empty row for spacing
       worksheet.addRow(['Summary']);
       worksheet.addRow(['Total Items', items.length]);
       
+      // Calculate and add low stock count
       const lowStockCount = items.filter(item => item.currentStock <= item.minimumRequired).length;
       worksheet.addRow(['Low Stock Items', lowStockCount]);
       
+      // Calculate and add out-of-stock count
       const outOfStockCount = items.filter(item => item.currentStock <= 0).length;
       worksheet.addRow(['Out of Stock Items', outOfStockCount]);
       
-      // Bold the summary title
+      // Style the summary title
       const summaryTitleRow = worksheet.lastRow.number - 3;
       worksheet.getCell(`A${summaryTitleRow}`).font = { bold: true };
       
-      // Set content type and headers
+      // Set response headers for Excel download
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=inventory_${type}_report.xlsx`);
       
-      // Write to response
+      // Generate Excel buffer and send response
       const buffer = await workbook.xlsx.writeBuffer();
       res.send(buffer);
     }
@@ -595,13 +622,14 @@ app.get('/api/reports/inventory/:type/download', async (req, res) => {
   }
 });
 
+// Endpoint to download sales report as PDF or Excel
 app.get('/api/reports/sales/download', async (req, res) => {
   try {
     const { format, startDate, endDate } = req.query;
     
     console.log(`Generating downloadable ${format} sales report from ${startDate || 'all time'} to ${endDate || 'all time'}`);
     
-    // Fetch sales data
+    // Build date filter for SQL queries if dates provided
     let dateFilter = '';
     let dateParams = [];
     
@@ -630,31 +658,31 @@ app.get('/api/reports/sales/download', async (req, res) => {
       dateParams
     );
     
-    // Optional: Get custom orders if they exist
+    // Include custom orders if available
     let allOrders = [...orders];
     
-    // Calculate summary
+    // Calculate summary statistics
     const totalOrders = allOrders.length;
     const totalRevenue = allOrders.reduce((sum, order) => 
       sum + (parseFloat(order.total) || 0), 0);
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
-    // Generate the appropriate file
+    // Generate the appropriate file format (PDF or Excel)
     if (format === 'pdf') {
-      // Create a PDF document
+      // Create a PDF document for the sales report
       const doc = new PDFDocument({
         margin: 50,
         size: 'A4'
       });
       
-      // Set response headers
+      // Set response headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=sales_report.pdf`);
       
       // Pipe the PDF document to the response
       doc.pipe(res);
       
-      // Add content to the PDF
+      // Add title and header content
       doc.fontSize(25).text('Sales Report', { align: 'center' });
       
       doc.moveDown();
@@ -665,7 +693,7 @@ app.get('/api/reports/sales/download', async (req, res) => {
       
       doc.moveDown(2);
       
-      // Add summary
+      // Add summary section
       doc.fontSize(14).font('Helvetica-Bold').text('Summary', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).font('Helvetica');
@@ -675,7 +703,7 @@ app.get('/api/reports/sales/download', async (req, res) => {
       
       doc.moveDown(2);
       
-      // Table headers
+      // Create table for orders
       doc.fontSize(12).font('Helvetica-Bold');
       const tableTop = doc.y;
       doc.text('Date', 50, tableTop);
@@ -685,14 +713,15 @@ app.get('/api/reports/sales/download', async (req, res) => {
       doc.text('Total (LKR)', 350, tableTop);
       doc.text('Status', 450, tableTop);
       
+      // Add a horizontal line under headers
       doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
       
-      // Table rows
+      // Add rows for each order (limited to first 100 to avoid huge PDFs)
       let rowTop = tableTop + 25;
       doc.fontSize(9).font('Helvetica');
       
       allOrders.forEach((order, index) => {
-        if (index < 100) { // Limit to first 100 orders to avoid huge PDFs
+        if (index < 100) { // Limit to first 100 orders
           const orderDate = new Date(order.date).toLocaleDateString();
           doc.text(orderDate, 50, rowTop);
           doc.text(order.id.toString(), 130, rowTop);
@@ -703,7 +732,8 @@ app.get('/api/reports/sales/download', async (req, res) => {
           
           rowTop += 20;
           
-          if (rowTop > 700) {  // Start a new page if we're near the bottom
+          // Create a new page if current page is full
+          if (rowTop > 700) {  
             doc.addPage();
             rowTop = 50;
             
@@ -723,6 +753,7 @@ app.get('/api/reports/sales/download', async (req, res) => {
         }
       });
       
+      // Add note if we're showing a limited set of orders
       if (allOrders.length > 100) {
         doc.moveDown();
         doc.text(`Showing first 100 out of ${allOrders.length} orders.`);
@@ -732,11 +763,11 @@ app.get('/api/reports/sales/download', async (req, res) => {
       doc.end();
       
     } else {
-      // Create an Excel workbook
+      // Create an Excel workbook for the sales report
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Sales Report');
       
-      // Add summary section
+      // Add title and header information
       worksheet.mergeCells('A1:F1');
       worksheet.getCell('A1').value = 'Sales Report Summary';
       worksheet.getCell('A1').font = { bold: true, size: 14 };
@@ -745,11 +776,13 @@ app.get('/api/reports/sales/download', async (req, res) => {
       worksheet.getCell('A2').value = 'Report Date:';
       worksheet.getCell('B2').value = new Date().toLocaleDateString();
       
+      // Add date range if provided
       if (startDate && endDate) {
         worksheet.getCell('A3').value = 'Period:';
         worksheet.getCell('B3').value = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
       }
       
+      // Add summary statistics
       worksheet.getCell('A4').value = 'Total Orders:';
       worksheet.getCell('B4').value = totalOrders;
       
@@ -762,11 +795,11 @@ app.get('/api/reports/sales/download', async (req, res) => {
       // Add empty row for spacing
       worksheet.addRow([]);
       
-      // Add order data
+      // Add section header for order data
       worksheet.addRow(['Order Data:']);
       worksheet.getRow(8).font = { bold: true };
       
-      // Add headers
+      // Add column headers
       worksheet.addRow(['Date', 'Order ID', 'Customer', 'Items', 'Total (LKR)', 'Status']);
       const headerRow = worksheet.lastRow;
       headerRow.eachCell(cell => {
@@ -778,7 +811,7 @@ app.get('/api/reports/sales/download', async (req, res) => {
         };
       });
       
-      // Add rows
+      // Add rows for each order
       allOrders.forEach(order => {
         worksheet.addRow([
           new Date(order.date).toLocaleDateString(),
@@ -790,16 +823,16 @@ app.get('/api/reports/sales/download', async (req, res) => {
         ]);
       });
       
-      // Format the data
+      // Format column widths
       worksheet.columns.forEach(column => {
         column.width = 15;
       });
       
-      // Set content type and headers
+      // Set response headers for Excel download
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=sales_report.xlsx`);
       
-      // Write to response
+      // Generate Excel buffer and send response
       const buffer = await workbook.xlsx.writeBuffer();
       res.send(buffer);
     }
@@ -809,10 +842,11 @@ app.get('/api/reports/sales/download', async (req, res) => {
   }
 });
 
-// Add endpoint for getting all custom orders
+// Endpoint to fetch all custom orders
 app.get('/api/custom-orders/all', async (req, res) => {
   try {
     console.log('Fetching all custom orders');
+    // Query the database for all custom orders with standardized field names
     const [orders] = await pool.query(
       `SELECT 
         request_id as requestId, 
@@ -839,12 +873,12 @@ app.get('/api/custom-orders/all', async (req, res) => {
   }
 });
 
-// Add a database migration endpoint to add service_charge column
+// Database migration endpoint to add service_charge column to custom_order_requests
 app.get('/api/db/migrate/add-service-charge', async (req, res) => {
   try {
     console.log('Running migration to add service_charge column to custom_order_requests table');
     
-    // Check if column already exists
+    // Check if the column already exists in the table
     const [columns] = await pool.query(`
       SELECT COLUMN_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
@@ -853,8 +887,9 @@ app.get('/api/db/migrate/add-service-charge', async (req, res) => {
       AND COLUMN_NAME = 'service_charge'
     `);
     
+    // Only add the column if it doesn't already exist
     if (columns.length === 0) {
-      // Add the column if it doesn't exist
+      // Execute ALTER TABLE SQL to add the new column
       await pool.query(`
         ALTER TABLE custom_order_requests
         ADD COLUMN service_charge DECIMAL(10,2) DEFAULT 0 NOT NULL
@@ -872,12 +907,12 @@ app.get('/api/db/migrate/add-service-charge', async (req, res) => {
   }
 });
 
-// Add a comprehensive migration endpoint for custom orders table
+// Comprehensive database migration endpoint for payment-related columns in custom_order_requests
 app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
   try {
     console.log('Running migrations for custom_order_requests payment columns');
     
-    // Check which columns need to be added
+    // Check which columns currently exist in the table
     const [columns] = await pool.query(`
       SELECT COLUMN_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
@@ -885,11 +920,11 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
       AND TABLE_NAME = 'custom_order_requests'
     `);
     
-    // Get list of existing column names
+    // Create a list of existing column names (case insensitive)
     const existingColumns = columns.map(col => col.COLUMN_NAME.toLowerCase());
     const additions = [];
     
-    // Check for each column and add it if missing
+    // Add service_charge column if it doesn't exist
     if (!existingColumns.includes('service_charge')) {
       await pool.query(`
         ALTER TABLE custom_order_requests
@@ -899,6 +934,7 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
       additions.push('service_charge');
     }
     
+    // Add payment_method column if it doesn't exist
     if (!existingColumns.includes('payment_method')) {
       await pool.query(`
         ALTER TABLE custom_order_requests
@@ -907,6 +943,7 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
       additions.push('payment_method');
     }
     
+    // Add amount_paid column if it doesn't exist
     if (!existingColumns.includes('amount_paid')) {
       await pool.query(`
         ALTER TABLE custom_order_requests
@@ -915,6 +952,7 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
       additions.push('amount_paid');
     }
     
+    // Add payment_status column if it doesn't exist
     if (!existingColumns.includes('payment_status')) {
       await pool.query(`
         ALTER TABLE custom_order_requests
@@ -923,6 +961,7 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
       additions.push('payment_status');
     }
     
+    // Return appropriate response based on what was added
     if (additions.length > 0) {
       res.json({ 
         success: true, 
@@ -940,10 +979,11 @@ app.get('/api/db/migrate/custom-orders-payment', async (req, res) => {
   }
 });
 
-// Add endpoint to create custom order requests directly
+// Endpoint to create new custom order request
 app.post('/api/custom-orders', async (req, res) => {
   try {
     console.log('Creating new custom order request');
+    // Extract data from request body
     const {
       customerName,
       description,
@@ -957,7 +997,7 @@ app.post('/api/custom-orders', async (req, res) => {
       serviceCharge
     } = req.body;
 
-    // Handle file upload
+    // Handle file upload if design image is provided
     let designImagePath = null;
     if (req.files && req.files.designImage) {
       const file = req.files.designImage;
@@ -966,10 +1006,10 @@ app.post('/api/custom-orders', async (req, res) => {
       designImagePath = `/uploads/${file.name}`;
     }
 
-    // Generate a unique request ID (e.g., REQ-12345)
+    // Generate a unique request ID with prefix REQ- and a random number
     const requestId = `REQ-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // Insert into database
+    // Insert the new custom order request into the database
     const [result] = await pool.query(
       `INSERT INTO custom_order_requests (
         request_id, 
@@ -994,10 +1034,10 @@ app.post('/api/custom-orders', async (req, res) => {
         itemType,
         designImagePath,
         quantity,
-        totalAmount / quantity,  // Unit price calculation
+        totalAmount / quantity,  // Calculate unit price from total and quantity
         totalAmount,
         serviceCharge || 0,
-        'pending',
+        'pending',               // Default status for new orders
         wantDate,
         specialNotes || '',
         paymentMethod,
@@ -1005,6 +1045,7 @@ app.post('/api/custom-orders', async (req, res) => {
       ]
     );
 
+    // Return success response with order details
     res.json({
       success: true,
       message: 'Custom order request created successfully',
@@ -1024,7 +1065,7 @@ app.post('/api/custom-orders', async (req, res) => {
   }
 });
 
-// Test database connection
+// Test endpoint to verify database connection
 app.get('/test-db', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT 1 + 1 AS solution');
@@ -1035,14 +1076,14 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// Root route
+// Root route to verify API is running
 app.get('/', (req, res) => {
     res.send('API WORKING');
 });
 
-// Start the server
+// Start the server and listen for requests
 app.listen(port, () => {
     console.log(`Server starting on http://localhost:${port}`);
-    // Check if the base URL path matches what your frontend is using
+    // Output information about cashier routes for quick reference
     console.log('Cashier routes registered at: /api/user/cashier');
 });
