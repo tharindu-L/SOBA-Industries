@@ -183,7 +183,7 @@ const Cart = () => {
             <Box sx={{ flex: 1 }}>
               <Typography variant="h6">{item.name}</Typography>
               <Typography variant="body2" color="text.secondary">{item.category}</Typography>
-              <Typography variant="body1" fontWeight="bold">${item.price}</Typography>
+              <Typography variant="body1" fontWeight="bold">LKR {item.price}</Typography>
             </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -204,7 +204,7 @@ const Cart = () => {
             </Box>
             
             <Typography variant="h6" sx={{ minWidth: 80, textAlign: 'right' }}>
-              ${(item.price * item.quantity).toFixed(2)}
+              LKR {(item.price * item.quantity).toFixed(2)}
             </Typography>
             
             <IconButton 
@@ -219,10 +219,10 @@ const Cart = () => {
       
       <Paper sx={{ mt: 4, p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5">
-          Total: ${calculateTotal()}
+          Total: LKR {calculateTotal()}
           {paymentMethod === 'advance' && (
             <Typography variant="body2" color="text.secondary">
-              (30% advance: ${(parseFloat(calculateTotal()) * 0.3).toFixed(2)})
+              (30% advance: LKR {(parseFloat(calculateTotal()) * 0.3).toFixed(2)})
             </Typography>
           )}
         </Typography>
@@ -276,12 +276,12 @@ const Cart = () => {
                 <FormControlLabel 
                   value="full" 
                   control={<Radio />} 
-                  label={`Full Payment ($${calculateTotal()})`} 
+                  label={`Full Payment (LKR ${calculateTotal()})`} 
                 />
                 <FormControlLabel 
                   value="advance" 
                   control={<Radio />} 
-                  label={`30% Advance ($${(parseFloat(calculateTotal()) * 0.3).toFixed(2)})`} 
+                  label={`30% Advance (LKR ${(parseFloat(calculateTotal()) * 0.3).toFixed(2)})`} 
                 />
               </RadioGroup>
             </FormControl>

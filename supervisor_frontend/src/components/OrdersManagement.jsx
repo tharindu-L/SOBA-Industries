@@ -148,9 +148,9 @@ const OrderManagement = () => {
       case 'processing':
         return <Badge bg="warning">Processing</Badge>;
       case 'shipped':
-        return <Badge bg="primary">Shipped</Badge>;
-      case 'delivered':
-        return <Badge bg="success">Delivered</Badge>;
+        return <Badge bg="success">Shipped</Badge>;
+      // case 'delivered':
+      //   return <Badge bg="success">Delivered</Badge>;
       case 'cancelled':
         return <Badge bg="danger">Cancelled</Badge>;
       default:
@@ -267,7 +267,7 @@ const OrderManagement = () => {
                       <option value="all">All Statuses</option>
                       <option value="processing">Processing</option>
                       <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
+                      {/* <option value="delivered">Delivered</option> */}
                       <option value="cancelled">Cancelled</option>
                     </Form.Select>
                   </Form.Group>
@@ -455,7 +455,7 @@ const OrderManagement = () => {
                   >
                     <option value="processing">Processing</option>
                     <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
+                    {/* <option value="delivered">Delivered</option> */}
                     <option value="cancelled">Cancelled</option>
                   </Form.Select>
                 </Form.Group>
