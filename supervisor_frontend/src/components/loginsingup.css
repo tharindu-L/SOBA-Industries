@@ -3,9 +3,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 230.5%;
     background: linear-gradient(135deg, #6e7fef, #4a5a99); 
     margin-top: -80px;
+    overflow-y: hidden;
   }
   
   /* Card style with shadows and rounded corners */

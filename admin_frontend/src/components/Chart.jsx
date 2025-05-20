@@ -449,9 +449,11 @@ const Dashboard = () => {
             </TableHead>
             <TableBody>
               {analyticsData.materialUsage.map((material, index) => {
-                const total = material.available_qty + (material.used_qty || 0);
+                const available = Number(material.available_qty) || 0;
+                const used = Number(material.used_qty) || 0;
+                const total = available + used;
                 const usagePercentage = total > 0 
-                  ? ((material.used_qty / total) * 100).toFixed(1)
+                  ? ((used / total) * 100).toFixed(1)
                   : 0;
 
                 return (
